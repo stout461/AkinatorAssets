@@ -3,7 +3,7 @@ name: Deploy to EC2
 on:
   push:
     branches:
-      - feature/AutoDeploy
+      - main
 
 jobs:
   deploy:
@@ -20,7 +20,6 @@ jobs:
         username: ubuntu
         key: ${{ secrets.EC2_SSH_KEY }}
         script: |
-          cd ~/AkinatorAssets/src
+          cd ~/AkinatorAssets
           git pull origin main
-          pkill -f AkinatorAssets_2030Targets_AutoRefresh.py || true
-          nohup python3 AkinatorAssets_2030Targets_AutoRefresh.py > out.log 2>&1 &
+          sudo systemctl restart akinator

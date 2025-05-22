@@ -41,3 +41,38 @@ Upload the scripts to be ran.
 C:\Users\stout\IdeaProjects\AkinatorAssets\src
 
 scp -i ~/Downloads/AkinatorAuth.pem -r ~/IdeaProjects/AkinatorAssets/src/AkinatorAssets_2030Targets_AutoRefresh.py ~/IdeaProjects/AkinatorAssets/src/run_watchlist_scriptv2.py ~/IdeaProjects/AkinatorAssets/src/templates ~/IdeaProjects/AkinatorAssets/src/static ubuntu@Public IP here # Ommiting becuase this is public repo
+
+
+
++++++++++++++++++++++++++++++++++++ 
+
+Updated Script to run off of a simpler command.
+
+If you ssh into the ec2 instance I created simply run 
+
+    sudo systemctl restart akinator
+
+You can check if it is active by 
+
+    systemctl status akinator
+
+
++++++++++++++++++++++++++++++++++++++
+
+Github actions workflow "deploy.yml" -> it is currently set to deploy "on push" to main branch. Meaning that code will be deployed when we merge to main....
+If you want to test your feature branch you can add your feature branch name to the workflow, and it will deploy when you push to that branch. 
+
+ex 
+
+on:
+  push:
+    branches:
+      - main
+
+Change to: 
+
+on:
+  push:
+    branches:
+      - main
+      - feature/<branch_name_here>

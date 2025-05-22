@@ -22,6 +22,4 @@ jobs:
         script: |
           cd ~/AkinatorAssets
           git pull origin main
-          cd src
-          pkill -f AkinatorAssets_2030Targets_AutoRefresh.py || true
-          nohup python3 AkinatorAssets_2030Targets_AutoRefresh.py > out.log 2>&1 &
+          sudo systemctl restart akinator

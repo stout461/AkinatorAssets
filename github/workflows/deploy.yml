@@ -1,0 +1,26 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches:
+      - feature/AutoDeploy
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v3
+
+    - name: Deploy via SSH
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ubuntu
+        key: ${{ secrets.EC2_SSH_KEY }}
+        script: |
+          cd ~/AkinatorAssets/src
+          git pull origin main
+          pkill -f AkinatorAssets_2030Targets_AutoRefresh.py || true
+          nohup python3 AkinatorAssets_2030Targets_AutoRefresh.py > out.log 2>&1 &

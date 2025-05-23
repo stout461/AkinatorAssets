@@ -35,7 +35,36 @@ $(document).ready(function() {
         });
 
         cachedData.forEach(row => {
-            const rowHtml = cachedCols.map(col => `<td>${row[col] !== null ? row[col] : ''}</td>`).join('');
+            const rowHtml = cachedCols.map(col => {
+                const cellValue = row[col] !== null ? row[col] : '';
+
+                // 🎨 Special logic for the "5Y Multibagger Rate" column
+                if (col === "5Y Multibagger Rate") {
+                    const rate = parseFloat(cellValue);
+                    let backgroundColor = "#ffffff"; // fallback white
+
+                    if (!isNaN(rate)) {
+                        const midpoint = 1.5;
+                        let intensity;
+
+                        if (rate < midpoint) {
+                            // Red gradient: closer to 0 = darker red, closer to 1.5 = lighter red
+                            intensity = Math.round(255 * (rate / midpoint)); // 0 → 255
+                            backgroundColor = `rgb(255, ${intensity}, ${intensity})`;
+                        } else {
+                            // Green gradient: closer to 1.5 = lighter green, higher = darker green
+                            const greenRange = Math.min(rate - midpoint, 3.5); // cap effect above 5
+                            intensity = Math.round(255 * (1 - greenRange / 2)); // closer to 1.5 = 255, higher = 0
+                            backgroundColor = `rgb(${intensity}, 255, ${intensity})`;
+                        }
+                    }
+
+                    return `<td class="gradient-cell" style="background-color: ${backgroundColor}">${cellValue}</td>`;
+                }
+
+                return `<td>${cellValue}</td>`;
+            }).join('');
+
             $('#watchlist-body').append(`<tr>${rowHtml}</tr>`);
         });
 
@@ -44,7 +73,10 @@ $(document).ready(function() {
         if ($.fn.DataTable.isDataTable('#watchlist-table')) {
             $('#watchlist-table').DataTable().destroy();
         }
-        $('#watchlist-table').DataTable();
+        $('#watchlist-table').DataTable({
+            pageLength: 25,  // default to 25
+            lengthMenu: [10, 25, 50, 100]
+        });
     }
 
     // ✅ Auto-trigger AAPL chart on load

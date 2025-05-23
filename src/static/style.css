@@ -1,0 +1,75 @@
+body {
+	margin: 0;
+	padding: 0;
+	background-color: #f4f8f7;
+	font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.container-fluid {
+	width: 100%;
+	padding: 20px 40px;
+}
+
+h1 {
+	color: #0ac775;
+}
+
+.card-panel {
+	background-color: #ffffff;
+	border-radius: 8px;
+	padding: 20px;
+	margin-bottom: 20px;
+	box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.fib-settings,
+#trendLineSettings {
+	background-color: #ffffff;
+	padding: 15px;
+	border-radius: 8px;
+	margin-bottom: 20px;
+	box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.fib-label {
+	display: inline-block;
+	margin-right: 10px;
+	font-weight: 500;
+}
+
+.stat-label {
+	color: #555;
+	font-weight: 500;
+}
+
+.stat-value {
+	font-weight: 600;
+	color: #333;
+}
+
+#graph {
+	width: 100%;
+}
+
+.form-check-input:checked {
+	background-color: #0ac775;
+	border-color: #0ac775;
+}
+
+.spinner-border.text-primary {
+	color: #0ac775 !important;
+}
+
+.text-primary {
+	color: #0ac775 !important;
+}
+
+.btn-primary {
+	background-color: #0ac775;
+	border-color: #0ac775;
+}
+
+.btn-primary:hover {
+	background-color: #0cbf72;
+	border-color: #0cbf72;
+}

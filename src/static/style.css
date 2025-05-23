@@ -73,3 +73,22 @@ h1 {
 	background-color: #0cbf72;
 	border-color: #0cbf72;
 }
+
+.gradient-cell {
+    font-weight: 600;
+    color: #000; /* stays readable on light backgrounds */
+}
+
+.table-responsive {
+    max-height: 90vh;         /* Only scroll if the table gets tall */
+    overflow-y: auto;
+    overflow-x: auto;
+}
+
+#watchlist-table thead th {
+    position: sticky;
+    top: 0;
+    background-color: #ffffff;
+    z-index: 2;
+    border-bottom: 2px solid #ddd;
+}

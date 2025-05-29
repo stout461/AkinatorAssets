@@ -246,7 +246,7 @@ def main(return_dataframe=False):
     "AAPL", "AMZN", "GOOG", "META", "MSFT",
 
     # Semiconductors & equipment
-    "AMD", "ASML", "AVGO", "MU", "NVDA", "TSM", "QCOM", "TXN", "ARM", "INTC", "SMCI",
+    "AMD", "ASML", "AVGO", "MU", "NVDA", "QCOM", "TXN", "ARM", "INTC", "SMCI",
 
     # Enterprise software & cloud-native SaaS
     "ADBE", "CRM", "INTU", "MDB", "ORCL", "SNOW", "GTLB", "U", "DELL", "NOW", "ACN", "DOCN", "CFLT", "WIX", "IBM", "ZI", "ASAN", "TTD", "ZM", "HUBS", "ANET", "ADP", "MNDY",

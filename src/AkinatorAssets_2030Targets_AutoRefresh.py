@@ -15,8 +15,8 @@ sys.path.append(os.getcwd())  # Assumes run_watchlist_scriptv2.py is in same dir
 from apscheduler.schedulers.background import BackgroundScheduler
 from pytz import timezone
 from run_watchlist_scriptv2 import main
-from src.schwab_api.client import SchwabClient
-from src.schwab_api.auth import SchwabAuth
+from schwab_api.client import SchwabClient
+from schwab_api.auth import SchwabAuth
 
 auth = SchwabAuth()
 client = SchwabClient(auth)

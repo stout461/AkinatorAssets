@@ -1,8 +1,8 @@
 import requests
 
-from src.schwab_api.rate_limiter import RateLimiter
+from schwab_api.rate_limiter import RateLimiter
 import uuid
-from src.schwab_api.exceptions import SchwabAPIError
+from schwab_api.exceptions import SchwabAPIError
 
 
 class SchwabClient:

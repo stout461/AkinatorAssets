@@ -9,13 +9,17 @@ from threading import Timer
 import requests
 import time
 import random
-import yfinance as yf
 import sys
 import os
 sys.path.append(os.getcwd())  # Assumes run_watchlist_scriptv2.py is in same dir
 from apscheduler.schedulers.background import BackgroundScheduler
 from pytz import timezone
 from run_watchlist_scriptv2 import main
+from src.schwab_api.client import SchwabClient
+from src.schwab_api.auth import SchwabAuth
+
+auth = SchwabAuth()
+client = SchwabClient(auth)
 
 def scheduled_watchlist_run():
     try:
@@ -72,39 +76,60 @@ def format_revenue_billions(value):
         return "N/A"
 
 def get_stock_data(symbol, start_date, end_date):
-    """Fetch historical data from yfinance."""
+    """Fetch historical OHLCV data from Schwab API."""
     try:
-        ticker = yf.Ticker(symbol)
-        df = ticker.history(start=start_date, end=end_date)
-        if not df.empty and all(col in df.columns for col in ['Open', 'High', 'Low', 'Close', 'Volume']):
-            df = df[['Open', 'High', 'Low', 'Close', 'Volume']]
-        df = df.dropna()
+        # Convert start/end dates to epoch milliseconds
+        # Ensure datetime format
+        if isinstance(start_date, datetime):
+            start_dt = start_date
+        else:
+            start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+
+        if isinstance(end_date, datetime):
+            end_dt = end_date
+        else:
+            end_dt = datetime.strptime(end_date, "%Y-%m-%d")
+
+        # Convert to epoch ms
+        start_ms = int(time.mktime(start_dt.timetuple()) * 1000)
+        end_ms = int(time.mktime(end_dt.timetuple()) * 1000)
+
+        # Fetch price history
+        data = client.get_price_history(
+            symbol=symbol,
+            start_date=start_ms,
+            end_date=end_ms,
+            period_type="year",       # explicitly allow daily data
+            frequency_type="daily",   # daily candles
+            frequency=1
+        )
+
+
+        candles = data.get("candles", [])
+        if not candles:
+            return pd.DataFrame()
+
+        df = pd.DataFrame(candles)
+        df['datetime'] = pd.to_datetime(df['datetime'], unit='ms')
+        df.set_index('datetime', inplace=True)
+        df = df.rename(columns={"open": "Open", "high": "High", "low": "Low", "close": "Close", "volume": "Volume"})
+        df = df[['Open', 'High', 'Low', 'Close', 'Volume']].dropna()
         return df
+
     except Exception as e:
-        print(f"Error getting data for {symbol}: {str(e)}")
+        print(f"Error getting Schwab price history for {symbol}: {e}")
         return pd.DataFrame()
 
-def get_yfinance_data(symbol):
-    """Fetch financial metrics from yfinance."""
+def get_finance_data(symbol):
+    """Fetch fundamental metrics from Schwab API."""
     try:
-        print(f"Getting yfinance data for {symbol}...")
-        time.sleep(random.uniform(1, 3))  # Slight random delay
+        result = client.search_instruments(symbol, projection="fundamental")
+        instruments = result.get("instruments", [])
+        if instruments:
+            return instruments[0].get("fundamental", {})
 
-        stock = yf.Ticker(symbol)
-        info = stock.info
-
-        data = {
-            'totalRevenue': info.get('totalRevenue', None),
-            'revenueGrowth': info.get('revenueGrowth', None),
-            'marketCap': info.get('marketCap', None),
-            'trailingPE': info.get('trailingPE', None),
-            'forwardPE': info.get('forwardPE', None),
-            'profitMargins': info.get('profitMargins', None),
-            'priceToSalesTrailing12Months': info.get('priceToSalesTrailing12Months', None)
-        }
-        return data
     except Exception as e:
-        print(f"Error with yfinance for {symbol}: {str(e)}")
+        print(f"Error fetching Schwab financial data for {symbol}: {e}")
         return {}
 
 def calculate_future_value(revenue, revenue_growth, market_cap, trailing_pe, profit_margin):
@@ -181,15 +206,8 @@ def plot():
     """
     ticker = request.form['ticker'].strip().upper()
     period = request.form.get('period', '1Y')
-
-    # If the user is in "Fibonacci" mode, we respect the "manualFib" checkbox.
-    # If in "Trendline" mode, we do not draw the fib lines.
-    # So let's interpret request.form for these booleans:
-    chart_mode = request.form.get('chartMode', 'fib')   # "fib" or "trendlines"
-    manual_fib = False
-    if chart_mode == 'fib':  # only if they're in fib mode do we read the checkbox
-        manual_fib = request.form.get('manualFib', 'false') == 'true'
-
+    chart_mode = request.form.get('chartMode', 'fib')
+    manual_fib = request.form.get('manualFib', 'false') == 'true' if chart_mode == 'fib' else False
     show_extensions = request.form.get('showExtensions', 'false') == 'true'
     fib_high = request.form.get('fibHigh')
     debug = True
@@ -198,36 +216,22 @@ def plot():
         return jsonify(error="Please enter a valid ticker symbol")
 
     try:
-        # Determine start/end date from period
         end_date = datetime.now()
-        if period == '1M':
-            start_date = end_date - timedelta(days=30)
-        elif period == '3M':
-            start_date = end_date - timedelta(days=90)
-        elif period == '6M':
-            start_date = end_date - timedelta(days=180)
-        elif period == '1Y':
-            start_date = end_date - timedelta(days=365)
-        elif period == '5Y':
-            start_date = end_date - timedelta(days=365*5)
-        else:
-            start_date = end_date - timedelta(days=365)
+        period_map = {
+            '1M': 30, '3M': 90, '6M': 180, '1Y': 365, '5Y': 365*5
+        }
+        days = period_map.get(period, 365)
+        start_date = end_date - timedelta(days=days)
 
         df = get_stock_data(ticker, start_date, end_date)
         if df.empty:
             return jsonify(error=f"No data found for ticker: {ticker}")
 
-        # Build the Plotly figure
         fig = go.Figure()
-
-        # Convert index to datetime if needed
-        if not isinstance(df.index, pd.DatetimeIndex):
-            df.index = pd.to_datetime(df.index)
-
+        df.index = pd.to_datetime(df.index)
         x_dates = df.index.strftime('%Y-%m-%d').tolist()
         y_values = df['Close'].tolist()
 
-        # Price trace
         fig.add_trace(go.Scatter(
             x=x_dates,
             y=y_values,
@@ -236,12 +240,9 @@ def plot():
             line=dict(color='#0ac775', width=2)
         ))
 
-        # Only draw Fibonacci lines if user selected "Fib" mode AND manualFib is true
         if chart_mode == 'fib' and manual_fib and fib_high:
             try:
                 fib_high_val = float(fib_high)
-
-                # Standard retracement levels
                 fib_levels = {
                     'level0': fib_high_val,
                     'level236': fib_high_val * (1 - 0.236),
@@ -250,7 +251,6 @@ def plot():
                     'level618': fib_high_val * (1 - 0.618),
                     'level786': fib_high_val * (1 - 0.786),
                 }
-
                 fib_colors = {
                     'level0': 'rgba(255, 0, 0, 0.7)',
                     'level236': 'rgba(255, 165, 0, 0.7)',
@@ -259,73 +259,33 @@ def plot():
                     'level618': 'rgba(0, 0, 255, 0.7)',
                     'level786': 'rgba(128, 0, 128, 0.7)'
                 }
-
-                fib_names = {
-                    'level0': '0% - ' + f"${fib_high_val:.2f}",
-                    'level236': '23.6% - ' + f"${fib_levels['level236']:.2f}",
-                    'level382': '38.2% - ' + f"${fib_levels['level382']:.2f}",
-                    'level50': '50% - ' + f"${fib_levels['level50']:.2f}",
-                    'level618': '61.8% - ' + f"${fib_levels['level618']:.2f}",
-                    'level786': '78.6% - ' + f"${fib_levels['level786']:.2f}",
-                }
-
                 for level, value in fib_levels.items():
                     fig.add_trace(go.Scatter(
-                        x=x_dates,
-                        y=[value]*len(x_dates),
-                        mode='lines',
-                        line=dict(
-                            color=fib_colors.get(level, 'rgba(128, 128, 128, 0.7)'),
-                            width=1,
-                            dash='dash'
-                        ),
-                        name=fib_names.get(level, level),
-                        hoverinfo='name+y'
+                        x=x_dates, y=[value]*len(x_dates), mode='lines',
+                        line=dict(color=fib_colors.get(level), width=1, dash='dash'),
+                        name=f"{level.upper()} - ${value:.2f}"
                     ))
-
-                # Optional extension lines above fib_high
                 if show_extensions:
-                    ext_ratios = [1.272, 1.382, 1.618, 2.618]
-                    ext_colors = ['#FF6666', '#FF8888', '#FFAAAA', '#FFC0CB']
-                    for i, ratio in enumerate(ext_ratios):
-                        extension_value = fib_high_val * ratio
-                        ratio_percent = ratio * 100
+                    for ratio in [1.272, 1.382, 1.618, 2.618]:
+                        ext_value = fib_high_val * ratio
                         fig.add_trace(go.Scatter(
-                            x=x_dates,
-                            y=[extension_value]*len(x_dates),
-                            mode='lines',
-                            line=dict(
-                                color=ext_colors[i],
-                                width=1,
-                                dash='dash'
-                            ),
-                            name=f"{ratio_percent:.1f}% - ${extension_value:.2f}",
-                            hoverinfo='name+y'
+                            x=x_dates, y=[ext_value]*len(x_dates), mode='lines',
+                            line=dict(color='rgba(255,100,100,0.5)', width=1, dash='dash'),
+                            name=f"{ratio*100:.1f}% - ${ext_value:.2f}"
                         ))
             except ValueError:
                 if debug:
-                    print("Error: Could not parse the manual fib high value.")
-
-        # Layout
-        period_name = {
-            "1M": "Past Month",
-            "3M": "Past 3 Months",
-            "6M": "Past 6 Months",
-            "1Y": "Past Year",
-            "5Y": "Past 5 Years"
-        }.get(period, "Past Year")
+                    print("Invalid fib high")
 
         fig.update_layout(
-            title=f"{ticker} Stock Price - {period_name}",
+            title=f"{ticker} Stock Price - {period}",
             xaxis_title="Date",
             yaxis_title="Price (USD)",
             template="plotly_white",
             height=600
         )
 
-        # Get financial metrics
-        financial_data = get_yfinance_data(ticker)
-
+        financial_data = get_finance_data(ticker)
         current_price = df['Close'].iloc[-1]
         first_price = df['Close'].iloc[0]
         period_change = ((current_price / first_price) - 1) * 100
@@ -340,44 +300,41 @@ def plot():
         }
 
         financial_metrics = {
-            "revenueGrowth": format_growth(financial_data.get('revenueGrowth')),
-            "forwardPE": format_ratio(financial_data.get('forwardPE')),
-            "trailingPE": format_ratio(financial_data.get('trailingPE')),
-            "profitMargin": format_growth(financial_data.get('profitMargins')),
-            "priceToSales": format_ratio(financial_data.get('priceToSalesTrailing12Months')),
-            "totalRevenue": format_revenue_billions(financial_data.get('totalRevenue')),
-            "marketCap": format_revenue_billions(financial_data.get('marketCap'))
+            "revenueGrowth": format_growth(financial_data.get('revChangeTTM')/100),
+            "forwardPE": format_ratio(financial_data.get('pegRatio')),
+            "trailingPE": format_ratio(financial_data.get('peRatio')),
+            "profitMargin": format_growth(financial_data.get('netProfitMarginTTM')/100),
+            "priceToSales": format_ratio(financial_data.get('prRatio')),
+            "totalRevenue": format_revenue_billions(
+                financial_data.get('marketCap') / financial_data.get('prRatio')
+                if financial_data.get('marketCap') and financial_data.get('prRatio') else None
+            ),
+            "marketCap": format_revenue_billions(financial_data.get('marketCap')),
         }
 
-        # Calculate naive 5-year price target
-        revenue = financial_data.get('totalRevenue')
-        revenue_growth = financial_data.get('revenueGrowth')
-        market_cap = financial_data.get('marketCap')
-        trailing_pe = financial_data.get('trailingPE')
-        profit_margin = financial_data.get('profitMargins')
-        if profit_margin is not None:
-            profit_margin *= 100
+        # Revenue estimation
+        pr_ratio = financial_data.get("prRatio")
+        market_cap = financial_data.get("marketCap")
+        revenue = market_cap / pr_ratio if market_cap and pr_ratio else None
+
+        revenue_growth = financial_data.get('revChangeTTM')
+        if revenue_growth is not None:
+            revenue_growth /= 100  # Schwab gives it in %
+
+        trailing_pe = financial_data.get('peRatio')
+        profit_margin = financial_data.get('netProfitMarginTTM')  # Already %
 
         future_value, rate_increase, adjustments = calculate_future_value(
             revenue, revenue_growth, market_cap, trailing_pe, profit_margin
         )
-
         price_target = {
-            "futureValue": None if future_value is None else f"${future_value}B",
-            "rateIncrease": None if rate_increase is None else f"{rate_increase}x",
+            "futureValue": None if future_value is None else f"${future_value:.2f}B",
+            "rateIncrease": None if rate_increase is None else f"{rate_increase:.2f}x",
             "adjustments": adjustments
         }
 
-        # Convert figure to JSON
         graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
-
-        # Return everything as JSON
-        return jsonify(
-            graph=graphJSON,
-            price=price_stats,
-            financials=financial_metrics,
-            priceTarget=price_target
-        )
+        return jsonify(graph=graphJSON, price=price_stats, financials=financial_metrics, priceTarget=price_target)
 
     except Exception as e:
         print(f"Error in plot function: {str(e)}")
@@ -391,5 +348,5 @@ if __name__ == '__main__':
     scheduler.add_job(scheduled_watchlist_run, 'cron', hour=16, minute=30)
     scheduler.start()
 
-    app.run(host='0.0.0.0', port=8080, debug=False)
+    app.run(host='0.0.0.0', port=5000, debug=False)
 

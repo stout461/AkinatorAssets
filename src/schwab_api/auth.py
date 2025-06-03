@@ -1,7 +1,7 @@
 import requests
 import time
 import base64
-fromschwab_api.config import CLIENT_ID, CLIENT_SECRET, REFRESH_TOKEN, TOKEN_URL
+from schwab_api.config import CLIENT_ID, CLIENT_SECRET, REFRESH_TOKEN, TOKEN_URL
 
 class SchwabAuth:
     def __init__(self):

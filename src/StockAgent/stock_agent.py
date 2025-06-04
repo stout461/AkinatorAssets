@@ -32,8 +32,8 @@ load_dotenv()
 # Method 3: For testing ONLY - Set in this notebook session (keys not saved)
 # ⚠️  ONLY use this for temporary testing, never commit to git!
 
-AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
-AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
+AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
+AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
 AWS_DEFAULT_REGION = 'us-east-1'
 
 # Silent AWS setup - no print statements

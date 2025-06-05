@@ -16,6 +16,8 @@ sys.path.append(os.getcwd())  # Assumes run_watchlist_scriptv2.py is in same dir
 from apscheduler.schedulers.background import BackgroundScheduler
 from pytz import timezone
 from run_watchlist_scriptv2 import main
+from stock_agent import analyze_and_parse_stock
+import traceback
 
 def scheduled_watchlist_run():
     try:
@@ -150,6 +152,46 @@ def calculate_future_value(revenue, revenue_growth, market_cap, trailing_pe, pro
 
 def open_browser():
     webbrowser.open_new('http://localhost:8080/')
+
+
+
+@app.route('/analyze_stock', methods=['POST'])
+def analyze_stock_route():
+    """
+    New endpoint to run stock analysis using the stock agent
+    """
+    try:
+        ticker = request.form['ticker'].strip().upper()
+
+        if not ticker:
+            return jsonify(success=False, error="Please enter a valid ticker symbol")
+
+        print(f"🎯 Starting stock analysis for {ticker}")
+
+        # Run the stock analysis with parsing
+        result = analyze_and_parse_stock(ticker, verbose=True)
+
+        if result['success']:
+            print(f"✅ Analysis completed for {ticker}")
+
+            return jsonify(
+                success=True,
+                ticker=ticker,
+                duration=result['duration'],
+                search_calls=result['search_calls'],
+                executive_summary=result['executive_summary'],
+                sections=result['parsed_sections'],
+                metrics=result['metrics']
+            )
+        else:
+            print(f"❌ Analysis failed for {ticker}: {result['error']}")
+            return jsonify(success=False, error=result['error'])
+
+    except Exception as e:
+        error_msg = f"Server error during analysis: {str(e)}"
+        print(f"❌ {error_msg}")
+        print(traceback.format_exc())  # Print full traceback for debugging
+        return jsonify(success=False, error=error_msg)
 
 @app.route('/')
 def index():

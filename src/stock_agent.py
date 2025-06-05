@@ -233,6 +233,7 @@ Current market context suggests that investors are focusing on:
 • Earnings performance and guidance for {current_year}
 • Revenue growth trends in the current economic environment
 • Market sentiment and analyst ratings
+• The MOAT and market positioning of the company (key competitive advantages) 
 • Industry-specific developments in {current_year}
 • Economic indicators impact on stock performance
 
@@ -297,7 +298,8 @@ def get_stock_data(ticker: str) -> dict:
             'industry': info.get('industry', 'N/A'),
             'current_price': current_price,
             'market_cap': info.get('marketCap', 0),
-            'pe_ratio': info.get('forwardPE', info.get('trailingPE', 'N/A')),
+            'current_pe_ratio': info.get('trailingPE', 'N/A'),
+            'forward_pe_ratio': info.get('forwardPE', 'N/A'),
             'price_to_book': info.get('priceToBook', 'N/A'),
             'debt_to_equity': info.get('debtToEquity', 'N/A'),
             'revenue_growth': info.get('revenueGrowth', 'N/A'),
@@ -373,7 +375,7 @@ def setup_claude_model():
 
 def create_system_prompt():
     """Create enhanced system prompt with strategic search integration"""
-    return f"""You are "Stock Analysis Expert", a sophisticated financial analysis assistant with strategic search integration capabilities.
+    return f"""You are "Stock Analysis Expert", a sophisticated financial analysis assistant with strategic search integration capabilities. You are acting as a psuedo investment analysis from goldman sachs or one of the top hedge funds in the world, with a Harvard MBA, so please format responses as such in complete sentences with detailed investment explanation as one of your peers will be utilizing your report.
 
 **CURRENT DATE CONTEXT:**
 Today's date is {datetime.now().strftime("%B %d, %Y")}. When analyzing stocks and interpreting search results, prioritize the most recent information available and note when data may be outdated.
@@ -399,13 +401,13 @@ Today's date is {datetime.now().strftime("%B %d, %Y")}. When analyzing stocks an
    - Note when data is from 2023 vs 2024-2025
 
 **OUTPUT FORMAT:**
-1. **Executive Summary** (3-4 sentences)
+1. **Executive Summary** (5-6 sentences including an overview of the company and their market positioning)
 2. **Key Metrics Snapshot**
-3. **🐂 BULL CASE** (4-6 detailed points with search evidence when available)
-4. **🐻 BEAR CASE** (4-6 detailed points with search evidence when available)
+3. **🐂 BULL CASE** (4-6 detailed positions containing 2-4 sentences with search evidence when available)
+4. **🐻 BEAR CASE** (4-6 detailed positions containing 2-4 sentences with search evidence when available)
 5. **📊 INVESTMENT TAKEAWAY**
 6. **🔍 SEARCH INTEGRATION SUMMARY** (mandatory section)
-7. **🤔 ANALYTICAL REASONING** (detailed investment analysis opinion like you are a goldman sachs investment analyst) 
+7. **🤔 ANALYTICAL REASONING** (detailed investment analysis opinion like you are a goldman sachs analyst) 
 
 **SEARCH INTEGRATION SUMMARY REQUIREMENTS:**
 You MUST include a "🔍 SEARCH INTEGRATION SUMMARY" section that explicitly states:

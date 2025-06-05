@@ -193,18 +193,22 @@ function fetchStockData() {
         $('#error').text('Please enter a valid ticker symbol').show();
         return;
     }
+
+    // Show loading states
     $('#loading').show();
+    $('#analysis-loading').show();
     $('#error').hide();
     $('#stats-container').hide();
     $('#price-target-container').hide();
+    $('#analysis-container').hide();
 
-    // We'll decide "manualFib" = true if in fib mode AND manualFibMode is checked
     const chartMode = getChartClickMode();
     const manualFib = (chartMode === 'fib') && $('#manualFibMode').is(':checked');
     const showExtensions = $('#showExtensions').is(':checked');
     const fibHigh = $('#fibHighValue').val();
 
-    $.ajax({
+    // Start both requests simultaneously
+    const chartRequest = $.ajax({
         url: '/plot',
         type: 'POST',
         data: {
@@ -214,56 +218,144 @@ function fetchStockData() {
             manualFib: manualFib,
             showExtensions: showExtensions,
             fibHigh: fibHigh
-        },
-        success: function(response) {
-            $('#loading').hide();
-            if (response.error) {
-                $('#error').text(response.error).show();
-                return;
-            }
-            // Plot the returned figure
-            const figData = JSON.parse(response.graph);
-            Plotly.newPlot('graph', figData.data, figData.layout).then(function() {
-                var graphDiv = document.getElementById('graph');
-                graphDiv.on('plotly_click', chartClickHandler);
-
-                // store x-data in chartDataX for horizontal lines
-                if (figData.data.length > 0) {
-                    chartDataX = figData.data[0].x || [];
-                }
-            });
-
-            // Update stats
-            $('#current-price').text(response.price.current);
-            $('#period-change').text(response.price.change);
-            $('#year-high').text(response.price.high);
-            $('#year-low').text(response.price.low);
-
-            $('#revenue-growth').text(response.financials.revenueGrowth);
-            $('#forward-pe').text(response.financials.forwardPE);
-            $('#trailing-pe').text(response.financials.trailingPE);
-            $('#profit-margin').text(response.financials.profitMargin);
-            $('#price-to-sales').text(response.financials.priceToSales);
-            $('#total-revenue').text(response.financials.totalRevenue);
-            $('#market-cap').text(response.financials.marketCap);
-
-            $('#future-value').text(response.priceTarget.futureValue || 'N/A');
-            $('#rate-increase').text(response.priceTarget.rateIncrease || 'N/A');
-            if (response.priceTarget.adjustments) {
-                $('#adjustment-note').text('Note: ' + response.priceTarget.adjustments).show();
-            } else {
-                $('#adjustment-note').hide();
-            }
-
-            $('#stats-container').show();
-            $('#price-target-container').show();
-            initUserProjections(response);
-        },
-        error: function(error) {
-            $('#loading').hide();
-            $('#error').text('An error occurred while fetching data.').show();
         }
     });
+
+    const analysisRequest = $.ajax({
+        url: '/analyze_stock',
+        type: 'POST',
+        data: {
+            ticker: ticker
+        }
+    });
+
+    // Handle chart data response
+    chartRequest.done(function(response) {
+        $('#loading').hide();
+
+        if (response.error) {
+            $('#error').text('Chart Error: ' + response.error).show();
+            return;
+        }
+
+        // Plot the chart
+        const figData = JSON.parse(response.graph);
+        Plotly.newPlot('graph', figData.data, figData.layout).then(function() {
+            var graphDiv = document.getElementById('graph');
+            graphDiv.on('plotly_click', chartClickHandler);
+
+            if (figData.data.length > 0) {
+                chartDataX = figData.data[0].x || [];
+            }
+        });
+
+        // Update financial stats
+        updateFinancialStats(response);
+        $('#stats-container').show();
+        $('#price-target-container').show();
+        initUserProjections(response);
+    });
+
+    chartRequest.fail(function(error) {
+        $('#loading').hide();
+        $('#error').text('Chart request failed. Please try again.').show();
+    });
+
+    // Handle analysis response
+    analysisRequest.done(function(response) {
+        $('#analysis-loading').hide();
+
+        if (response.success) {
+            displayAnalysisResults(response);
+            $('#analysis-container').show();
+            console.log(`✅ Analysis completed in ${response.duration}s with ${response.search_calls} searches`);
+        } else {
+            displayAnalysisError(response.error);
+        }
+    });
+
+    analysisRequest.fail(function(error) {
+        $('#analysis-loading').hide();
+        displayAnalysisError('Analysis request failed. Please check your connection and try again.');
+    });
+}
+
+// New function to update financial stats
+function updateFinancialStats(response) {
+    $('#current-price').text(response.price.current);
+    $('#period-change').text(response.price.change);
+    $('#year-high').text(response.price.high);
+    $('#year-low').text(response.price.low);
+
+    $('#revenue-growth').text(response.financials.revenueGrowth);
+    $('#forward-pe').text(response.financials.forwardPE);
+    $('#trailing-pe').text(response.financials.trailingPE);
+    $('#profit-margin').text(response.financials.profitMargin);
+    $('#price-to-sales').text(response.financials.priceToSales);
+    $('#total-revenue').text(response.financials.totalRevenue);
+    $('#market-cap').text(response.financials.marketCap);
+
+    $('#future-value').text(response.priceTarget.futureValue || 'N/A');
+    $('#rate-increase').text(response.priceTarget.rateIncrease || 'N/A');
+
+    if (response.priceTarget.adjustments) {
+        $('#adjustment-note').text('Note: ' + response.priceTarget.adjustments).show();
+    } else {
+        $('#adjustment-note').hide();
+    }
+}
+
+// New function to display analysis results
+function displayAnalysisResults(response) {
+    try {
+        // Convert markdown-style headers and formatting to HTML
+        const formatAnalysisText = (text) => {
+            if (!text) return '<p class="text-muted">No data available</p>';
+
+            return text
+                .replace(/## (.*?)$/gm, '<h3>$1</h3>')  // Convert ## headers to h3
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')  // Convert **bold** to <strong>
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')  // Convert *italic* to <em>
+                .replace(/\n\n/g, '</p><p>')  // Convert double newlines to paragraph breaks
+                .replace(/\n/g, '<br>')  // Convert single newlines to <br>
+                .replace(/^/, '<p>')  // Add opening <p> tag
+                .replace(/$/, '</p>');  // Add closing <p> tag
+        };
+
+        // Update each section with formatted content
+        $('#executive-summary').html(formatAnalysisText(response.sections.company_info));
+        $('#bull-case').html(formatAnalysisText(response.sections.bull_case));
+        $('#bear-case').html(formatAnalysisText(response.sections.bear_case));
+        $('#analytical-reasoning').html(formatAnalysisText(response.sections.analytical_reasoning));
+
+        // Add success styling
+        $('#analysis-container .card-panel').addClass('analysis-success');
+
+        console.log('✅ Analysis sections updated successfully');
+
+    } catch (error) {
+        console.error('Error formatting analysis results:', error);
+        displayAnalysisError('Error formatting analysis results');
+    }
+}
+
+// New function to display analysis errors
+function displayAnalysisError(errorMessage) {
+    const errorHtml = `
+        <div class="analysis-error p-3 rounded">
+            <h6>⚠️ Analysis Error</h6>
+            <p>${errorMessage}</p>
+            <small class="text-muted">Please try again or contact support if the issue persists.</small>
+        </div>
+    `;
+
+    $('#executive-summary').html(errorHtml);
+    $('#bull-case').html('<p class="text-muted">Analysis unavailable due to error above</p>');
+    $('#bear-case').html('<p class="text-muted">Analysis unavailable due to error above</p>');
+    $('#analytical-reasoning').html('<p class="text-muted">Analysis unavailable due to error above</p>');
+
+    $('#analysis-container').show();
+    console.error('Analysis error:', errorMessage);
 }
 
 // User projection sliders

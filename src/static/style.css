@@ -92,3 +92,67 @@ h1 {
     z-index: 2;
     border-bottom: 2px solid #ddd;
 }
+
+.analysis-content {
+    line-height: 1.6;
+    font-size: 14px;
+}
+
+.analysis-content h2,
+.analysis-content h3 {
+    color: #0ac775;
+    margin-top: 20px;
+    margin-bottom: 10px;
+}
+
+.analysis-content ul {
+    padding-left: 20px;
+}
+
+.analysis-content li {
+    margin-bottom: 8px;
+}
+
+.analysis-content p {
+    margin-bottom: 12px;
+    text-align: justify;
+}
+
+.analysis-content strong {
+    color: #333;
+}
+
+.analysis-content em {
+    color: #666;
+    font-style: italic;
+}
+
+/* Loading states */
+#analysis-loading .card-panel {
+    text-align: center;
+    padding: 40px 20px;
+}
+
+/* Success state styling */
+.analysis-success {
+    border-left: 4px solid #0ac775;
+    background-color: #f8fff8;
+}
+
+/* Error state styling */
+.analysis-error {
+    border-left: 4px solid #dc3545;
+    background-color: #fff8f8;
+    color: #721c24;
+}
+
+/* Responsive design for analysis sections */
+@media (max-width: 768px) {
+    .analysis-content {
+        font-size: 13px;
+    }
+
+    .card-panel {
+        padding: 15px;
+    }
+}

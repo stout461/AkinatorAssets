@@ -18,6 +18,7 @@ from pytz import timezone
 from run_watchlist_scriptv2 import main
 from stock_agent import analyze_and_parse_stock
 import traceback
+from agent_cache import get_cached_agent_output, cache_agent_output
 
 def scheduled_watchlist_run():
     try:
@@ -157,32 +158,35 @@ def open_browser():
 
 @app.route('/analyze_stock', methods=['POST'])
 def analyze_stock_route():
-    """
-    New endpoint to run stock analysis using the stock agent
-    """
     try:
         ticker = request.form['ticker'].strip().upper()
-
         if not ticker:
             return jsonify(success=False, error="Please enter a valid ticker symbol")
 
         print(f"🎯 Starting stock analysis for {ticker}")
 
-        # Run the stock analysis with parsing
+        # 🧠 Try cache first
+        cached = get_cached_agent_output(ticker)
+        if cached:
+            print(f"✅ Returning cached agent result for {ticker}")
+            return jsonify(success=True, **cached)
+
+        # 🧠 Otherwise, run agent
         result = analyze_and_parse_stock(ticker, verbose=True)
 
         if result['success']:
             print(f"✅ Analysis completed for {ticker}")
-
-            return jsonify(
-                success=True,
-                ticker=ticker,
-                duration=result['duration'],
-                search_calls=result['search_calls'],
-                executive_summary=result['executive_summary'],
-                sections=result['parsed_sections'],
-                metrics=result['metrics']
-            )
+            # ⏺️ Save only what's needed
+            output = {
+                "ticker": ticker,
+                "duration": result['duration'],
+                "search_calls": result['search_calls'],
+                "executive_summary": result['executive_summary'],
+                "sections": result['parsed_sections'],
+                "metrics": result['metrics']
+            }
+            cache_agent_output(ticker, output)
+            return jsonify(success=True, **output)
         else:
             print(f"❌ Analysis failed for {ticker}: {result['error']}")
             return jsonify(success=False, error=result['error'])
@@ -190,7 +194,7 @@ def analyze_stock_route():
     except Exception as e:
         error_msg = f"Server error during analysis: {str(e)}"
         print(f"❌ {error_msg}")
-        print(traceback.format_exc())  # Print full traceback for debugging
+        print(traceback.format_exc())
         return jsonify(success=False, error=error_msg)
 
 @app.route('/')

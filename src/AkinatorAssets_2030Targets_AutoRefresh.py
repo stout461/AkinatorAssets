@@ -19,6 +19,12 @@ from run_watchlist_scriptv2 import main
 from stock_agent import analyze_and_parse_stock
 import traceback
 from agent_cache import get_cached_agent_output, cache_agent_output
+from flask import Flask, request, jsonify
+import sys
+import os
+
+# Import the MOAT analysis function
+from moat_agent import run_moat_analysis_for_web
 
 def scheduled_watchlist_run():
     try:
@@ -155,6 +161,89 @@ def open_browser():
     webbrowser.open_new('http://localhost:8080/')
 
 
+
+
+# Add this new route to your existing Flask app
+# Add this import at the top of your Flask file
+from moat_agent import run_moat_analysis_for_web
+
+# Add this route to your Flask app
+@app.route('/api/moat-analysis', methods=['POST'])
+def moat_analysis():
+    """
+    API endpoint for MOAT analysis
+    Expects: {"ticker": "AAPL"}
+    Returns: {"success": bool, "data": {...}, "error": str}
+    """
+    try:
+        data = request.get_json()
+
+        if not data or 'ticker' not in data:
+            return jsonify({
+                'success': False,
+                'error': 'Ticker is required'
+            }), 400
+
+        ticker = data['ticker'].strip().upper()
+
+        if not ticker:
+            return jsonify({
+                'success': False,
+                'error': 'Valid ticker is required'
+            }), 400
+
+        print(f"🏰 Running MOAT analysis for {ticker}...")
+
+        # Run MOAT analysis
+        result = run_moat_analysis_for_web(ticker)
+
+        if result['success']:
+            print(f"✅ MOAT analysis completed for {ticker}")
+            return jsonify({
+                'success': True,
+                'data': {
+                    'ticker': result['ticker'],
+                    'duration': result['duration'],
+                    'sections': result['sections']
+                },
+                'error': None
+            })
+        else:
+            print(f"❌ MOAT analysis failed for {ticker}: {result['error']}")
+            return jsonify({
+                'success': False,
+                'data': None,
+                'error': result['error']
+            }), 500
+
+    except Exception as e:
+        print(f"💥 MOAT analysis error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'data': None,
+            'error': f'Analysis failed: {str(e)}'
+        }), 500
+
+# Optional: Add a health check for MOAT analysis
+@app.route('/api/moat-health', methods=['GET'])
+def moat_health():
+    """Health check for MOAT analysis system"""
+    try:
+        # Test if we can import the MOAT analysis function
+        from moat_agent import run_moat_analysis_for_web
+
+        return jsonify({
+            'status': 'healthy',
+            'moat_system': 'operational',
+            'timestamp': datetime.now().isoformat()
+        })
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'moat_system': 'failed',
+            'error': str(e),
+            'timestamp': datetime.now().isoformat()
+        }), 500
 
 @app.route('/analyze_stock', methods=['POST'])
 def analyze_stock_route():

@@ -291,7 +291,7 @@ def main(return_dataframe=False):
     "LYFT", "UBER", "GRAB", 
 
     # Autos & EV
-    "TSLA", "LCID", "F", "GM", "RIVN",
+    "TSLA", "LCID", "F", "GM", "RIVN", "ACHR",
 
     # Travel & hospitality
     "ABNB", "DAL", "UAL",

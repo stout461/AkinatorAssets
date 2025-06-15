@@ -18,7 +18,7 @@
         <!-- Ticker + Period Selection Panel -->
         <div class="card-panel flex-grow-1">
             <div class="input-group mb-3">
-                <input type="text" id="ticker" class="form-control" placeholder="Enter Stock Ticker (e.g., AAPL)" value="AAPL">
+                <input type="text" id="ticker" class="form-control" placeholder="Enter Stock Ticker (e.g., AAPL)" value="HIMS">
                 <button id="submit" class="btn btn-primary">Show Data</button>
             </div>
             <div class="btn-group w-100 mb-3" role="group">
@@ -41,8 +41,10 @@
     </div>
 
 
+
     <!-- Stats Container (Price Info & Financials) -->
     <div id="stats-container" style="display:none;">
+        <!-- Price Information - Full Width -->
         <div class="card-panel">
             <h5 class="mb-3">Price Information</h5>
             <div class="row">
@@ -61,41 +63,143 @@
             </div>
         </div>
 
-        <div class="card-panel">
-            <h5 class="mb-3">Financial Metrics</h5>
-            <table class="table">
-                <tr>
-                    <td class="stat-label">Revenue Growth:</td>
-                    <td id="revenue-growth" class="stat-value"></td>
-                </tr>
-                <tr>
-                    <td class="stat-label">Forward P/E:</td>
-                    <td id="forward-pe" class="stat-value"></td>
-                </tr>
-                <tr>
-                    <td class="stat-label">Trailing P/E:</td>
-                    <td id="trailing-pe" class="stat-value"></td>
-                </tr>
-                <tr>
-                    <td class="stat-label">Profit Margin:</td>
-                    <td id="profit-margin" class="stat-value"></td>
-                </tr>
-                <tr>
-                    <td class="stat-label">P/S Ratio:</td>
-                    <td id="price-to-sales" class="stat-value"></td>
-                </tr>
-                <tr>
-                    <td class="stat-label">Total Revenue:</td>
-                    <td id="total-revenue" class="stat-value"></td>
-                </tr>
-                <tr>
-                    <td class="stat-label">Market Cap:</td>
-                    <td id="market-cap" class="stat-value"></td>
-                </tr>
-            </table>
+        <!-- Replace your existing financial metrics and MOAT section with this: -->
+
+        <!-- Financial Metrics & MOAT Analysis - Side by Side with Equal Heights -->
+        <div class="row stats-row">
+            <!-- Financial Metrics - 1/4 of the page -->
+            <div class="col-lg-3">
+                <div class="card-panel">
+                    <h5 class="mb-3">Financial Metrics</h5>
+                    <div class="financial-metrics-table">
+                        <table class="table table-sm">
+                            <tr>
+                                <td class="stat-label">Revenue Growth:</td>
+                                <td id="revenue-growth" class="stat-value"></td>
+                            </tr>
+                            <tr>
+                                <td class="stat-label">Forward P/E:</td>
+                                <td id="forward-pe" class="stat-value"></td>
+                            </tr>
+                            <tr>
+                                <td class="stat-label">Trailing P/E:</td>
+                                <td id="trailing-pe" class="stat-value"></td>
+                            </tr>
+                            <tr>
+                                <td class="stat-label">Profit Margin:</td>
+                                <td id="profit-margin" class="stat-value"></td>
+                            </tr>
+                            <tr>
+                                <td class="stat-label">P/S Ratio:</td>
+                                <td id="price-to-sales" class="stat-value"></td>
+                            </tr>
+                            <tr>
+                                <td class="stat-label">Total Revenue:</td>
+                                <td id="total-revenue" class="stat-value"></td>
+                            </tr>
+                            <tr>
+                                <td class="stat-label">Market Cap:</td>
+                                <td id="market-cap" class="stat-value"></td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MOAT Analysis Section - 3/4 of the page -->
+            <div class="col-lg-9">
+                <div class="card-panel">
+                    <h5 class="mb-3">🏰 Competitive MOAT Analysis</h5>
+
+                    <!-- MOAT Analysis Loading -->
+                    <div id="moat-loading" class="text-center" style="display:none;">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Running competitive MOAT analysis...</p>
+                        <small class="text-muted">Analyzing competitive advantages, market positioning, and strategic moats...</small>
+                    </div>
+
+                    <!-- MOAT Analysis Content -->
+                    <div id="moat-content" style="display:none;">
+                        <!-- Executive Summary Tab -->
+                        <div class="mb-3">
+                            <ul class="nav nav-tabs" id="moatTabs" role="tablist">
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link active" id="executive-tab" data-bs-toggle="tab" data-bs-target="#executive" type="button" role="tab">
+                                        📊 Executive Summary
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="moat-tab" data-bs-toggle="tab" data-bs-target="#moat" type="button" role="tab">
+                                        🏰 MOAT Analysis
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="positioning-tab" data-bs-toggle="tab" data-bs-target="#positioning" type="button" role="tab">
+                                        📈 Market Positioning
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="competitive-tab" data-bs-toggle="tab" data-bs-target="#competitive" type="button" role="tab">
+                                        ⚔️ Competitive Landscape
+                                    </button>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <!-- Tab Content with Fixed Height -->
+                        <div class="tab-content" id="moatTabContent">
+                            <!-- Executive Summary -->
+                            <div class="tab-pane fade show active" id="executive" role="tabpanel">
+                                <div class="analysis-content">
+                                    <div id="moat-executive-summary">
+                                        <p class="text-muted">Executive summary will appear here after analysis...</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- MOAT Analysis -->
+                            <div class="tab-pane fade" id="moat" role="tabpanel">
+                                <div class="analysis-content">
+                                    <div id="moat-analysis-content">
+                                        <p class="text-muted">MOAT analysis will appear here after analysis...</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Market Positioning -->
+                            <div class="tab-pane fade" id="positioning" role="tabpanel">
+                                <div class="analysis-content">
+                                    <div id="market-positioning-content">
+                                        <p class="text-muted">Market positioning analysis will appear here after analysis...</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Competitive Landscape -->
+                            <div class="tab-pane fade" id="competitive" role="tabpanel">
+                                <div class="analysis-content">
+                                    <div id="competitive-landscape-content">
+                                        <p class="text-muted">Competitive landscape analysis will appear here after analysis...</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- MOAT Analysis Error -->
+                    <div id="moat-error" class="alert alert-danger" style="display:none;"></div>
+
+                    <!-- Initial State -->
+                    <div id="moat-initial" class="text-center" style="height: 400px; display: flex; align-items: center; justify-content: center; flex-direction: column;">
+                        <p class="text-muted">🏰 Enter a stock ticker and click "Show Data" to run comprehensive competitive MOAT analysis</p>
+                        <small class="text-muted">Analysis includes: Competitive advantages, market positioning, defensive/offensive moats, and strategic durability assessment</small>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
-
     <!-- Loading & Error -->
     <div id="loading" class="text-center" style="display:none;">
         <div class="spinner-border text-primary" role="status">
@@ -277,6 +381,10 @@
 </script>
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" />
+
+<!-- ADD THIS LINE -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+
 <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>

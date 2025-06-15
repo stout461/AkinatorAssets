@@ -416,3 +416,294 @@ function initUserProjections(response) {
 
 // Recalculate on slider input
 $('#user-revenue-growth, #user-profit-margin, #user-pe-ratio').on('input', calculateUserProjection);
+
+// Add these functions to your script.js file
+
+// ========================================
+// MOAT ANALYSIS FUNCTIONS
+// Add these to your existing script.js file
+// ========================================
+
+// MOAT Analysis Functions
+function runMOATAnalysis(ticker) {
+    console.log(`🏰 Starting MOAT analysis for ${ticker}`);
+
+    // Show loading state
+    showMOATLoading();
+
+    // Make API call to backend
+    fetch('/api/moat-analysis', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ ticker: ticker })
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('MOAT Analysis Response:', data);
+        if (data.success) {
+            displayMOATAnalysis(data.data);
+        } else {
+            showMOATError(data.error || 'MOAT analysis failed');
+        }
+    })
+    .catch(error => {
+        console.error('MOAT Analysis Error:', error);
+        showMOATError('Failed to connect to MOAT analysis service');
+    });
+}
+
+function showMOATLoading() {
+    document.getElementById('moat-initial').style.display = 'none';
+    document.getElementById('moat-content').style.display = 'none';
+    document.getElementById('moat-error').style.display = 'none';
+    document.getElementById('moat-loading').style.display = 'block';
+}
+
+function displayMOATAnalysis(data) {
+    console.log('✅ Displaying MOAT analysis:', data);
+
+    // Hide loading states
+    document.getElementById('moat-loading').style.display = 'none';
+    document.getElementById('moat-error').style.display = 'none';
+    document.getElementById('moat-initial').style.display = 'none';
+
+    // Show content
+    document.getElementById('moat-content').style.display = 'block';
+
+    // Populate sections
+    populateMOATSection('moat-executive-summary', data.sections.executive_summary);
+    populateMOATSection('moat-analysis-content', data.sections.moat_analysis);
+    populateMOATSection('market-positioning-content', data.sections.market_positioning);
+    populateMOATSection('competitive-landscape-content', data.sections.competitive_landscape);
+
+    // Update title
+    const mainTitle = document.querySelector('.col-lg-9 .card-panel h5');
+    if (mainTitle && data.ticker) {
+        mainTitle.innerHTML = `🏰 Competitive MOAT Analysis - ${data.ticker}`;
+    }
+
+    // Make sure first tab is active
+    setTimeout(() => {
+        switchMOATTab('executive');
+    }, 500);
+}
+
+function populateMOATSection(elementId, content) {
+    const element = document.getElementById(elementId);
+    if (!element) {
+        console.error(`❌ Element ${elementId} not found`);
+        return;
+    }
+
+    if (!content || content.trim() === '') {
+        element.innerHTML = '<p class="text-muted">No content available for this section.</p>';
+        return;
+    }
+
+    // Format content with proper HTML
+    const formattedContent = formatMOATContent(content);
+    element.innerHTML = formattedContent;
+}
+
+function formatMOATContent(content) {
+    let formatted = content;
+
+    // Convert markdown-style formatting to HTML
+    formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    formatted = formatted.replace(/\*(.*?)\*/g, '<em>$1</em>');
+
+    // Convert bullet points
+    formatted = formatted.replace(/^- (.*$)/gim, '<li>$1</li>');
+    formatted = formatted.replace(/^• (.*$)/gim, '<li>$1</li>');
+
+    // Wrap consecutive list items in ul tags
+    formatted = formatted.replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>');
+    formatted = formatted.replace(/<\/ul>\s*<ul>/g, '');
+
+    // Convert line breaks to paragraphs
+    const paragraphs = formatted.split('\n\n');
+    const htmlParagraphs = paragraphs.map(p => {
+        p = p.trim();
+        if (p === '') return '';
+        if (p.includes('<ul>') || p.includes('<li>')) return p;
+        return `<p>${p}</p>`;
+    }).filter(p => p !== '');
+
+    return htmlParagraphs.join('\n');
+}
+
+function showMOATError(errorMessage) {
+    document.getElementById('moat-loading').style.display = 'none';
+    document.getElementById('moat-content').style.display = 'none';
+    document.getElementById('moat-initial').style.display = 'none';
+
+    const errorElement = document.getElementById('moat-error');
+    errorElement.style.display = 'block';
+    errorElement.innerHTML = `
+        <h6>🏰 MOAT Analysis Failed</h6>
+        <p>${errorMessage}</p>
+        <small class="text-muted">Please try again or contact support if the issue persists.</small>
+    `;
+}
+
+function resetMOATAnalysis() {
+    // Reset to initial state
+    document.getElementById('moat-loading').style.display = 'none';
+    document.getElementById('moat-content').style.display = 'none';
+    document.getElementById('moat-error').style.display = 'none';
+    document.getElementById('moat-initial').style.display = 'block';
+
+    // Clear content
+    document.getElementById('moat-executive-summary').innerHTML = '<p class="text-muted">Executive summary will appear here after analysis...</p>';
+    document.getElementById('moat-analysis-content').innerHTML = '<p class="text-muted">MOAT analysis will appear here after analysis...</p>';
+    document.getElementById('market-positioning-content').innerHTML = '<p class="text-muted">Market positioning analysis will appear here after analysis...</p>';
+    document.getElementById('competitive-landscape-content').innerHTML = '<p class="text-muted">Competitive landscape analysis will appear here after analysis...</p>';
+
+    // Reset title
+    const mainTitle = document.querySelector('.col-lg-9 .card-panel h5');
+    if (mainTitle) {
+        mainTitle.innerHTML = '🏰 Competitive MOAT Analysis';
+    }
+}
+
+// Manual tab switching function
+function switchMOATTab(tabId) {
+    console.log('🔄 Switching to tab:', tabId);
+
+    // Hide all tab panes
+    const allPanes = document.querySelectorAll('#moatTabContent .tab-pane');
+    allPanes.forEach(pane => {
+        pane.classList.remove('show', 'active');
+    });
+
+    // Remove active class from all tabs
+    const allTabs = document.querySelectorAll('#moatTabs .nav-link');
+    allTabs.forEach(tab => {
+        tab.classList.remove('active');
+    });
+
+    // Show the selected tab pane
+    const selectedPane = document.getElementById(tabId);
+    if (selectedPane) {
+        selectedPane.classList.add('show', 'active');
+        console.log('✅ Activated pane:', tabId);
+    }
+
+    // Activate the corresponding tab button
+    const selectedTab = document.querySelector(`#moatTabs button[data-bs-target="#${tabId}"]`);
+    if (selectedTab) {
+        selectedTab.classList.add('active');
+        console.log('✅ Activated tab button');
+    }
+}
+
+// Initialize manual tab handlers
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🔧 Setting up MOAT tabs...');
+
+    // Add click handlers to each tab
+    const tabs = [
+        { buttonId: 'executive-tab', paneId: 'executive' },
+        { buttonId: 'moat-tab', paneId: 'moat' },
+        { buttonId: 'positioning-tab', paneId: 'positioning' },
+        { buttonId: 'competitive-tab', paneId: 'competitive' }
+    ];
+
+    tabs.forEach(tab => {
+        const button = document.getElementById(tab.buttonId);
+        if (button) {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                console.log('🎯 Tab clicked:', tab.buttonId);
+                switchMOATTab(tab.paneId);
+            });
+            console.log('✅ Added handler for:', tab.buttonId);
+        } else {
+            console.log('❌ Button not found:', tab.buttonId);
+        }
+    });
+
+    console.log('✅ MOAT tabs initialized');
+});
+
+// ========================================
+// MODIFY YOUR EXISTING SUBMIT FUNCTION
+// ========================================
+
+// Find your existing submit button event listener and replace it with this:
+document.getElementById('submit').addEventListener('click', function() {
+    const ticker = document.getElementById('ticker').value.trim().toUpperCase();
+
+    if (!ticker) {
+        alert('Please enter a stock ticker');
+        return;
+    }
+
+    console.log(`📊 Starting analysis for ${ticker}...`);
+
+    // Reset MOAT analysis first
+    resetMOATAnalysis();
+
+    // YOUR EXISTING STOCK DATA LOADING CODE GOES HERE
+    // (Keep all your existing functionality - just add the MOAT analysis call)
+
+    // Start MOAT analysis after a short delay
+    setTimeout(() => {
+        console.log(`🏰 Starting MOAT analysis for ${ticker}...`);
+        runMOATAnalysis(ticker);
+    }, 2000); // Start MOAT analysis 2 seconds after main data load
+});
+
+// ========================================
+// HANDLE PERIOD CHANGES (1M, 3M, 6M, 1Y, 5Y)
+// ========================================
+
+// Add event listeners to period buttons to trigger MOAT analysis
+document.addEventListener('DOMContentLoaded', function() {
+    const periodButtons = document.querySelectorAll('input[name="period"]');
+
+    periodButtons.forEach(button => {
+        button.addEventListener('change', function() {
+            const ticker = document.getElementById('ticker').value.trim().toUpperCase();
+
+            if (ticker) {
+                console.log(`📅 Period changed to ${this.value} for ${ticker}`);
+
+                // Reset MOAT analysis
+                resetMOATAnalysis();
+
+                // YOUR EXISTING PERIOD CHANGE CODE GOES HERE
+                // (Keep your existing chart update logic)
+
+                // Restart MOAT analysis for new period
+                setTimeout(() => {
+                    console.log(`🏰 Restarting MOAT analysis for ${ticker} (${this.value} period)...`);
+                    runMOATAnalysis(ticker);
+                }, 1500);
+            }
+        });
+    });
+});
+
+// ========================================
+// AUTO-RUN ON PAGE LOAD (like your existing agent)
+// ========================================
+
+// Auto-run MOAT analysis when page loads (if ticker is pre-filled)
+document.addEventListener('DOMContentLoaded', function() {
+    // Wait a bit for page to fully load
+    setTimeout(() => {
+        const ticker = document.getElementById('ticker').value.trim().toUpperCase();
+
+        if (ticker) {
+            console.log(`🚀 Auto-starting MOAT analysis for pre-filled ticker: ${ticker}`);
+
+            // Wait for your existing stock analysis to start first
+            setTimeout(() => {
+                runMOATAnalysis(ticker);
+            }, 3000); // 3 second delay to let main analysis start first
+        }
+    }, 1000);
+});

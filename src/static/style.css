@@ -156,3 +156,270 @@ h1 {
         padding: 15px;
     }
 }
+
+
+/* Add these styles to your existing style.css file */
+
+/* MOAT Analysis Specific Styles */
+.nav-tabs .nav-link {
+    color: #555;
+    border-bottom: 2px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.nav-tabs .nav-link.active {
+    color: #0ac775;
+    border-bottom: 2px solid #0ac775;
+    background-color: transparent;
+    font-weight: 600;
+}
+
+.nav-tabs .nav-link:hover {
+    color: #0ac775;
+    border-bottom: 2px solid rgba(10, 199, 117, 0.3);
+}
+
+/* MOAT Analysis Content Styling */
+.analysis-content {
+    min-height: 300px;
+    line-height: 1.7;
+    font-size: 14px;
+}
+
+.analysis-content h3 {
+    color: #0ac775;
+    font-size: 18px;
+    margin-top: 25px;
+    margin-bottom: 15px;
+    font-weight: 600;
+}
+
+.analysis-content h4 {
+    color: #333;
+    font-size: 16px;
+    margin-top: 20px;
+    margin-bottom: 12px;
+    font-weight: 600;
+}
+
+.analysis-content p {
+    margin-bottom: 15px;
+    text-align: justify;
+    color: #444;
+}
+
+.analysis-content ul {
+    padding-left: 25px;
+    margin-bottom: 20px;
+}
+
+.analysis-content li {
+    margin-bottom: 10px;
+    color: #444;
+    line-height: 1.6;
+}
+
+.analysis-content strong {
+    color: #0ac775;
+    font-weight: 600;
+}
+
+.analysis-content em {
+    color: #666;
+    font-style: italic;
+}
+
+/* MOAT Loading Animation */
+#moat-loading {
+    padding: 60px 20px;
+}
+
+#moat-loading .spinner-border {
+    width: 3rem;
+    height: 3rem;
+    margin-bottom: 20px;
+}
+
+#moat-loading p {
+    font-size: 16px;
+    font-weight: 500;
+    color: #0ac775;
+    margin-bottom: 10px;
+}
+
+#moat-loading small {
+    font-size: 13px;
+    color: #666;
+}
+
+/* MOAT Initial State */
+#moat-initial {
+    padding: 60px 20px;
+    text-align: center;
+}
+
+#moat-initial p {
+    font-size: 16px;
+    color: #666;
+    margin-bottom: 10px;
+}
+
+#moat-initial small {
+    font-size: 13px;
+    color: #888;
+    line-height: 1.5;
+}
+
+/* MOAT Error State */
+#moat-error {
+    margin-top: 20px;
+}
+
+#moat-error h6 {
+    color: #dc3545;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+/* Tab Content Transitions */
+.tab-content .tab-pane {
+    transition: opacity 0.3s ease-in-out;
+}
+
+.tab-content .tab-pane.fade:not(.show) {
+    opacity: 0;
+}
+
+.tab-content .tab-pane.fade.show {
+    opacity: 1;
+}
+
+/* MOAT Success Styling */
+.moat-success {
+    border-left: 4px solid #0ac775;
+    background-color: #f8fff8;
+    padding-left: 15px;
+}
+
+/* Responsive MOAT Design */
+@media (max-width: 768px) {
+    .analysis-content {
+        font-size: 13px;
+        min-height: 250px;
+    }
+
+    .analysis-content h3 {
+        font-size: 16px;
+    }
+
+    .analysis-content h4 {
+        font-size: 15px;
+    }
+
+    .nav-tabs .nav-link {
+        font-size: 12px;
+        padding: 8px 12px;
+    }
+
+    #moat-loading,
+    #moat-initial {
+        padding: 40px 15px;
+    }
+}
+
+@media (max-width: 576px) {
+    .nav-tabs {
+        font-size: 11px;
+    }
+
+    .nav-tabs .nav-link {
+        padding: 6px 8px;
+        font-size: 11px;
+    }
+
+    .analysis-content {
+        font-size: 12px;
+    }
+}
+
+/* Scroll behavior for long analysis content */
+.tab-content {
+    max-height: 70vh;
+    overflow-y: auto;
+    padding-right: 5px;
+}
+
+/* Add these styles to your existing style.css file */
+
+/* Make financial metrics and MOAT analysis sections same height */
+.stats-row {
+    display: flex;
+    align-items: stretch; /* This makes both columns the same height */
+}
+
+.stats-row .col-lg-3,
+.stats-row .col-lg-9 {
+    display: flex;
+    flex-direction: column;
+}
+
+.stats-row .card-panel {
+    flex: 1; /* This makes both panels expand to fill available height */
+    display: flex;
+    flex-direction: column;
+}
+
+/* Uniform height for all MOAT analysis tabs */
+.tab-content {
+    height: 400px; /* Set fixed height for all tabs */
+    overflow-y: auto;
+    padding-right: 10px;
+}
+
+.analysis-content {
+    min-height: 100%;
+    height: auto;
+}
+
+/* Ensure financial metrics table takes available space */
+.financial-metrics-table {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.financial-metrics-table .table {
+    flex: 1;
+}
+
+/* Custom scrollbar for better appearance */
+.tab-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.tab-content::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.tab-content::-webkit-scrollbar-thumb {
+    background: #0ac775;
+    border-radius: 4px;
+}
+
+.tab-content::-webkit-scrollbar-thumb:hover {
+    background: #0cbf72;
+}
+
+/* Responsive adjustments */
+@media (max-width: 991px) {
+    .tab-content {
+        height: 300px; /* Smaller height on mobile */
+    }
+}
+
+@media (max-width: 768px) {
+    .tab-content {
+        height: 250px; /* Even smaller on mobile */
+    }
+}

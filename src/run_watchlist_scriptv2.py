@@ -290,7 +290,7 @@ def main(return_dataframe=False):
     # Mobility & ride-hail
     "LYFT", "UBER", "GRAB", 
 
-    # Autos & EV
+    # Autos & EV - added achr
     "TSLA", "LCID", "F", "GM", "RIVN", "ACHR",
 
     # Travel & hospitality

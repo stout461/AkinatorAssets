@@ -335,7 +335,7 @@ function displayAnalysisResults(response) {
 
     } catch (error) {
         console.error('Error formatting analysis results:', error);
-        displayAnalysisError('Error formatting analysis results');
+        displayAnalysisError('Error formatting analysis results ');
     }
 }
 

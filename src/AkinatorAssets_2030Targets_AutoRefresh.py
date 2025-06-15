@@ -171,7 +171,7 @@ from moat_agent import run_moat_analysis_for_web
 @app.route('/api/moat-analysis', methods=['POST'])
 def moat_analysis():
     """
-    API endpoint for MOAT analysis
+    API endpoint for MOAT analysis v2
     Expects: {"ticker": "AAPL"}
     Returns: {"success": bool, "data": {...}, "error": str}
     """

@@ -146,7 +146,7 @@ h1 {
     color: #721c24;
 }
 
-/* Responsive design for analysis sections */
+/* Responsive design for analysis sections v2 */
 @media (max-width: 768px) {
     .analysis-content {
         font-size: 13px;

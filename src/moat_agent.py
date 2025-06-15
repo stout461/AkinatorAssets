@@ -43,7 +43,7 @@ except Exception as e:
 
 @tool
 def strategic_web_search(query: str, num_results: int = 5) -> str:
-    """Strategic web search using multiple DuckDuckGo approaches to avoid blocking"""
+    """Strategic web search using multiple DuckDuckGo approaches to avoid blocking """
     current_year = datetime.now().year
     current_date = datetime.now().strftime("%Y-%m")
 

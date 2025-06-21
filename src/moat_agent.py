@@ -37,6 +37,40 @@ try:
 except Exception as e:
     pass
 
+
+#Competitors Search
+@tool
+def identify_competitors(ticker: str) -> str:
+    """Specifically search for competitor names and competitive threats"""
+    print(f"🎯 Identifying competitors for {ticker}...")
+
+    competitor_queries = [
+        f"{ticker} main competitors rivals",
+        f"{ticker} competitive landscape analysis",
+        f"companies competing with {ticker}",
+        f"{ticker} market share vs competitors",
+        f"{ticker} industry competitive threats",
+        f"who are {ticker} biggest competitors",
+        f"{ticker} vs competition direct rivals"
+    ]
+
+    all_results = []
+    for i, query in enumerate(competitor_queries, 1):
+        print(f"   [{i}/{len(competitor_queries)}] Competitor search: {query}")
+        try:
+            result = strategic_web_search(query, 3)
+            all_results.append(f"COMPETITOR SEARCH {i}: {query}\n{result}\n{'='*50}\n")
+            time.sleep(1)  # Rate limiting
+        except Exception as e:
+            print(f"   ❌ Competitor search failed: {e}")
+            continue
+
+    compiled_results = "\n".join(all_results)
+    print(f"✅ Competitor identification complete: {len(all_results)} searches executed")
+
+    return f"COMPREHENSIVE COMPETITOR INTELLIGENCE FOR {ticker}:\n\n{compiled_results}"
+
+
 # =============================================================================
 # STRATEGIC WEB SEARCH TOOLS
 # =============================================================================
@@ -296,17 +330,18 @@ def setup_claude_model():
 
 def create_system_prompt():
     """Create enhanced system prompt optimized for MOAT and competitive analysis"""
-    return f"""You are "Competitive Strategy Analyst", an elite institutional investment analyst specializing in competitive moats, market positioning, and strategic advantages. You work for a top-tier hedge fund and possess deep expertise in identifying sustainable competitive advantages that create long-term shareholder value.
+    return f"""You are "Competitive Strategy Analyst", an elite institutional investment analyst specializing in competitive moats, market positioning, strategic advantages, and competitve research. You work for a top-tier hedge fund and possess deep expertise in identifying sustainable competitive advantages that create long-term shareholder value but are highly critical and take into consideration competitors and future trends.
 
 **CURRENT DATE CONTEXT:**
 Today's date is {datetime.now().strftime("%B %d, %Y")}. Prioritize the most recent market developments and competitive dynamics.
 
 **CORE ANALYTICAL FOCUS:**
 Your primary mission is to evaluate:
-1. **Competitive Moats**: Identify and analyze sustainable competitive advantages
-2. **Market Positioning**: Assess the company's strategic position within its industry
-3. **Competitive Landscape**: Map competitive threats, opportunities, and market dynamics
-4. **Strategic Durability**: Evaluate the sustainability of competitive advantages over time
+1. **Competitive Moats**: Identify and analyze maintainable competitive advantages
+2. **Market Positioning**: Assess the company's strategic position within its industry and competitor approaches
+3. **Competitive Landscape & Review**: In depth analysis of the competitors, competitive threats, and the differentiation between the company and competitors
+4. **Strategic Durability**: Evaluate the sustainability of competitive advantages over time versus established or emerging threats from competitors.
+
 
 **CRITICAL SEARCH INTEGRATION:**
 - ALWAYS cite specific search results with source attribution
@@ -318,41 +353,43 @@ Your primary mission is to evaluate:
 1. **get_stock_data**: For financial context and valuation metrics
 2. **enhanced_get_recent_news**: For market sentiment and recent developments
 3. **strategic_web_search**: For competitive intelligence and market positioning data
+4. **identify_competitors**: MANDATORY step to identify specific competitor names and threats
+
 
 **MANDATORY OUTPUT STRUCTURE:**
 
-## EXECUTIVE SUMMARY
-(4-5 sentences focusing on competitive position, moat strength, and market dynamics)
+## EXECUTIVE SUMMARY (in depth analysis) 
+(6-12 sentences focusing on competitive position, moat strength, and market dynamics)
 
-## MOAT ANALYSIS
+## MOAT ANALYSIS (in depth analysis) 
 **Defensive Moats** (What protects the business):
 - [Analyze barriers to entry, switching costs, network effects, brand strength, regulatory advantages]
 
 **Offensive Moats** (What drives expansion):
-- [Analyze scalability advantages, resource advantages, distribution advantages]
+- [Analyze scalability advantages, resource advantages, distribution advantages -- consider competitors]
 
 **Moat Durability** (Sustainability over 5-10 years):
-- [Assess threats to current advantages and evolution of competitive landscape]
+- [Assess threats to current advantages and evolution of competitive landscape -- consider competitors]
 
-## MARKET POSITIONING
+## MARKET POSITIONING (in depth analysis) 
 **Industry Position**:
-- [Market share, competitive ranking, industry dynamics]
+- [Market share, competitive ranking, industry dynamics, competitor names and perception relative to company]
 
 **Strategic Positioning**:
-- [Value proposition, customer segments, differentiation strategy]
+- [Value proposition, customer segments, differentiation strategy -- consider competitors]
 
 **Positioning Trends**:
-- [How position is evolving, emerging opportunities/threats]
+- [How position is evolving, emerging opportunities/threats -- consider competitors]
 
-## COMPETITIVE ADVANTAGES & LANDSCAPE
+## COMPETITIVE ADVANTAGES & LANDSCAPE (in depth analysis) 
 **Core Competitive Advantages**:
-- [Specific advantages with supporting evidence from searches]
+- [Specific advantages with supporting evidence from searches. Highlight any competitor advantages in the market.]
 
 **Competitive Threats**:
-- [Direct and indirect competitors, disruption risks]
+- [Direct and indirect competitors with those companies named, disruption risks]
 
-**Competitive Response Capability**:
-- [Company's ability to respond to competitive moves]
+**Competitive Approaches & Differences**:
+- [How are other competitors navigating the space and what are the key differences]
 
 **CITATION REQUIREMENTS:**
 - Use quotation marks for direct quotes from search results
@@ -398,47 +435,74 @@ def analyze_stock_moat(ticker: str) -> dict:
                 get_stock_data,
                 enhanced_get_recent_news,
                 strategic_web_search,
+                identify_competitors,
             ]
         )
 
         current_date = datetime.now().strftime("%B %d, %Y")
         analysis_start_time = time.time()
 
+        # ADD THIS SECTION HERE - COMPETITOR INTELLIGENCE GATHERING
+        print(f"🔍 Conducting competitor intelligence for {ticker}...")
+
+        competitor_searches = [
+            f"{ticker} main competitors 2025",
+            f"{ticker} vs competitors market share",
+            f"{ticker} competitive threats disruption",
+            f"top differentiators for competitors of {ticker}",
+            f"{ticker} industry competition analysis"
+        ]
+
+        competitor_intelligence = []
+        for search_query in competitor_searches:
+            print(f"   Searching: {search_query}")
+            search_result = strategic_web_search(search_query, 3)
+            competitor_intelligence.append(f"Query: {search_query}\n{search_result}\n{'='*50}\n")
+            time.sleep(1)  # Rate limiting between searches
+
+        # Combine all competitor intelligence
+        compiled_competitor_data = "\n".join(competitor_intelligence)
+        print(f"✅ Competitor intelligence gathered: {len(competitor_intelligence)} searches completed")
+
+        # MODIFY THE EXISTING RESULT CALL TO INCLUDE COMPETITOR DATA
         result = strategic_agent(f"""
         Conduct a comprehensive competitive moat and market positioning analysis for {ticker} stock.
         
         CURRENT DATE: {current_date}
         
+        COMPETITOR INTELLIGENCE ALREADY GATHERED:
+        {compiled_competitor_data}
+        
+        CRITICAL: Use the competitor intelligence data above to identify specific competitor names and threats.
+        
         ANALYTICAL MISSION:
         You are evaluating {ticker} as a potential high-conviction investment. Focus on:
         1. Sustainable competitive advantages (moats)
         2. Market positioning strength and evolution
-        3. Competitive landscape dynamics
+        3. Competitive landscape dynamics with SPECIFIC COMPETITOR NAMES
         4. Strategic durability over 5-10 year horizon
         
         REQUIRED TOOL USAGE:
         1. get_stock_data: Gather financial metrics for competitive context
         2. enhanced_get_recent_news: Identify recent competitive developments
-        3. strategic_web_search: Conduct competitive intelligence research
-           - Search for market positioning and competitive advantages
-           - Research industry dynamics and competitive threats
-           - Investigate recent strategic moves and market developments
+        3. strategic_web_search: Conduct additional targeted searches if needed
+        4. identify_competitors: Understand how competitors are and then use strategic web_web_search to dive deeper into differences
+        
+        MANDATORY COMPETITOR REQUIREMENTS:
+        - Identify at least 3-5 specific competitor company names from the intelligence gathered
+        - For each named competitor, specify their exact threat to {ticker}
+        - Distinguish between direct competitors, indirect competitors, and disruptors
+        - Use the competitor intelligence data provided above as your primary source
         
         COMPETITIVE INTELLIGENCE PRIORITIES:
         - What are {ticker}'s most sustainable competitive advantages?
-        - How is {ticker} positioned vs competitors in its market?
-        - What competitive threats and opportunities exist?
-        - How durable are {ticker}'s current advantages?
-        - What recent developments affect competitive positioning?
+        - WHO are {ticker}'s main competitors BY NAME?
+        - How is {ticker} positioned vs each named competitor?
+        - What specific threats does each competitor pose?
+        - How durable are {ticker}'s current advantages against named competitors?
         
-        SEARCH STRATEGY:
-        - Use 2025 context for all competitive intelligence queries
-        - Focus searches on competitive dynamics, not just financial performance
-        - Seek evidence of moat strength from market developments
-        - Research both offensive and defensive competitive capabilities
-        
-        CRITICAL: Your analysis will inform investment decisions. 
-        Provide institutional-quality depth and rigor.
+        CRITICAL: Your analysis must include specific competitor names and their threats.
+        Reference the competitor intelligence data gathered above.
         """)
 
         analysis_duration = time.time() - analysis_start_time

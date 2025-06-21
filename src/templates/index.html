@@ -40,6 +40,100 @@
         </div>
     </div>
 
+    <!-- Stock Analysis Sections - Hybrid Approach -->
+    <div id="analysis-container" style="display:none;">
+        <!-- Single Tabbed Container for All Analysis -->
+        <div class="card-panel">
+            <h5 class="mb-3">📈 Stock Analysis</h5>
+
+            <!-- Analysis Loading -->
+            <div id="analysis-loading-tabs" class="text-center" style="display:none;">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2">Running comprehensive stock analysis...</p>
+                <small class="text-muted">Generating analytical reasoning, bull case, bear case, and executive summary...</small>
+            </div>
+
+            <!-- Analysis Content -->
+            <div id="analysis-content">
+                <!-- Analysis Tabs -->
+                <div class="mb-3">
+                    <ul class="nav nav-tabs" id="analysisTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="analytical-reasoning-tab" data-bs-toggle="tab" data-bs-target="#analytical-reasoning-pane" type="button" role="tab">
+                                🧠 Analytical Reasoning
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="bull-case-tab" data-bs-toggle="tab" data-bs-target="#bull-case-pane" type="button" role="tab">
+                                🐂 Bull Case
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="bear-case-tab" data-bs-toggle="tab" data-bs-target="#bear-case-pane" type="button" role="tab">
+                                🐻 Bear Case
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="executive-summary-tab" data-bs-toggle="tab" data-bs-target="#executive-summary-pane" type="button" role="tab">
+                                📊 Executive Summary
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Tab Content -->
+                <div class="tab-content" id="analysisTabContent">
+                    <!-- Analytical Reasoning -->
+                    <div class="tab-pane fade show active" id="analytical-reasoning-pane" role="tabpanel">
+                        <div class="analysis-content">
+                            <div id="analytical-reasoning">
+                                <p class="text-muted">Detailed investment reasoning will appear here...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bull Case -->
+                    <div class="tab-pane fade" id="bull-case-pane" role="tabpanel">
+                        <div class="analysis-content">
+                            <div id="bull-case">
+                                <p class="text-muted">Bull case analysis will appear here...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bear Case -->
+                    <div class="tab-pane fade" id="bear-case-pane" role="tabpanel">
+                        <div class="analysis-content">
+                            <div id="bear-case">
+                                <p class="text-muted">Bear case analysis will appear here...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Executive Summary -->
+                    <div class="tab-pane fade" id="executive-summary-pane" role="tabpanel">
+                        <div class="analysis-content">
+                            <div id="executive-summary">
+                                <p class="text-muted">Executive summary will appear here...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Analysis Error -->
+            <div id="analysis-error" class="alert alert-danger" style="display:none;"></div>
+
+            <!-- Initial State -->
+            <div id="analysis-initial" class="text-center" style="height: 400px; display: flex; align-items: center; justify-content: center; flex-direction: column; display: none;">
+                <p class="text-muted">📈 Enter a stock ticker and click "Show Data" to run comprehensive stock analysis</p>
+                <small class="text-muted">Analysis includes: Investment reasoning, bull case scenarios, bear case risks, and executive summary</small>
+            </div>
+        </div>
+    </div>
+
 
 
     <!-- Stats Container (Price Info & Financials) -->
@@ -269,40 +363,6 @@
                 </div>
             </div>
         </div>
-    </div>
-
-    <!-- Stock Analysis Sections - Add this after the price-target-container -->
-    <div id="analysis-container" style="display:none;">
-        <!-- Analytical Reasoning Section -->
-        <div class="card-panel">
-            <div id="analytical-reasoning" class="analysis-content">
-                <p class="text-muted">Detailed investment reasoning will appear here...</p>
-            </div>
-        </div>
-
-
-        <!-- Bull Case Section -->
-        <div class="card-panel">
-            <div id="bull-case" class="analysis-content">
-                <p class="text-muted">Analysis will appear here...</p>
-            </div>
-        </div>
-
-        <!-- Bear Case Section -->
-        <div class="card-panel">
-            <div id="bear-case" class="analysis-content">
-                <p class="text-muted">Analysis will appear here...</p>
-            </div>
-        </div>
-
-        <!-- Executive Summary Section -->
-        <div class="card-panel">
-            <div id="executive-summary" class="analysis-content">
-                <p class="text-muted">Click "Show Data" to run comprehensive stock analysis...</p>
-            </div>
-        </div>
-
-
     </div>
 
     <!-- Analysis Loading Indicator -->

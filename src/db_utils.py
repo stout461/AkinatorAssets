@@ -2,7 +2,7 @@
 import psycopg2
 import os
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -39,6 +39,8 @@ def insert_agent_output(ticker, agent_output, model_used='bedrock'):
         cur.execute("SELECT id FROM tickers WHERE ticker = %s;", (ticker,))
         ticker_id = cur.fetchone()[0]
 
+        sections = agent_output.get("sections", {})
+
         cur.execute(
             """
             INSERT INTO agent_outputs (
@@ -53,13 +55,13 @@ def insert_agent_output(ticker, agent_output, model_used='bedrock'):
                 json.dumps(agent_output),
                 agent_output.get("duration"),
                 agent_output.get("search_calls"),
-                datetime.fromisoformat(agent_output.get("timestamp")),
+                datetime.fromisoformat(str(agent_output.get("timestamp"))) if agent_output.get("timestamp") else datetime.now(),
                 agent_output.get("executive_summary"),
-                agent_output.get("bull_case"),
-                agent_output.get("bear_case"),
-                agent_output.get("investment_takeaway"),
-                agent_output.get("analytical_reasoning"),
-                agent_output.get("search_summary"),
+                sections.get("bull_case"),
+                sections.get("bear_case"),
+                sections.get("investment_takeaway"),
+                sections.get("analytical_reasoning"),
+                sections.get("search_summary"),
                 model_used,
                 datetime.now()
             )
@@ -80,11 +82,17 @@ def fetch_latest_agent_output(ticker):
         ticker_id = result[0]
 
         cur.execute(
-            "SELECT raw_output FROM agent_outputs WHERE ticker_id = %s ORDER BY timestamp DESC LIMIT 1;",
+            "SELECT raw_output, timestamp FROM agent_outputs WHERE ticker_id = %s ORDER BY timestamp DESC LIMIT 1;",
             (ticker_id,)
         )
         row = cur.fetchone()
-        return json.loads(row[0]) if row else None
+        if row:
+            raw_output, timestamp = row
+            if timestamp and timestamp >= datetime.now() - timedelta(days=7):
+                return raw_output
+            else:
+                print(f"⚠️ Cached stock analysis for {ticker} is older than 7 days.")
+        return None
     finally:
         cur.close()
         conn.close()
@@ -96,7 +104,13 @@ def insert_moat_analysis(ticker, sections, duration, model_used="bedrock"):
     cur = conn.cursor()
     try:
         cur.execute("SELECT id FROM tickers WHERE ticker = %s;", (ticker,))
-        ticker_id = cur.fetchone()[0]
+        result = cur.fetchone()
+        if not result:
+            print(f"❌ Could not find ticker_id for {ticker}")
+            return
+        ticker_id = result[0]
+
+        print(f"📥 Inserting MOAT analysis for {ticker} (ID {ticker_id})...")
 
         cur.execute(
             """
@@ -114,6 +128,10 @@ def insert_moat_analysis(ticker, sections, duration, model_used="bedrock"):
             )
         )
         conn.commit()
+        print(f"✅ MOAT analysis inserted for {ticker}")
+
+    except Exception as e:
+        print(f"❌ Failed to insert moat analysis for {ticker}: {e}")
     finally:
         cur.close()
         conn.close()
@@ -129,17 +147,17 @@ def fetch_latest_moat_analysis(ticker):
         ticker_id = result[0]
 
         cur.execute(
-            """
-            SELECT analysis, duration
-            FROM moat_analysis
-            WHERE ticker_id = %s
-            ORDER BY generated_at DESC
-            LIMIT 1;
-            """,
+            "SELECT analysis, duration, generated_at FROM moat_analysis WHERE ticker_id = %s ORDER BY generated_at DESC LIMIT 1;",
             (ticker_id,)
         )
         row = cur.fetchone()
-        return {"sections": json.loads(row[0]), "duration": row[1]} if row else None
+        if row:
+            analysis, duration, generated_at = row
+            if generated_at and generated_at >= datetime.now() - timedelta(days=7):
+                return {"sections": analysis, "duration": duration}
+            else:
+                print(f"⚠️ Cached moat analysis for {ticker} is older than 7 days.")
+        return None
     finally:
         cur.close()
         conn.close()

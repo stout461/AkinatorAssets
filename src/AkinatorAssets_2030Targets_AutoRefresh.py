@@ -278,12 +278,29 @@ def analyze_stock_route():
         cached = fetch_latest_agent_output(ticker)
         if cached:
             print(f"✅ Returning cached agent result for {ticker}")
-            return jsonify(success=True, **cached.get('sections', {}),
+            print("📤 Returning response payload:")
+            print(jsonify(success=True,
+                    investment_takeaway=cached.get("investment_takeaway"),
+                    bull_case=cached.get("bull_case"),
+                    bear_case=cached.get("bear_case"),
+                    search_summary=cached.get("search_summary"),
+                    analytical_reasoning=cached.get("analytical_reasoning"),
+                    executive_summary=cached.get("executive_summary"),
+                    metrics=cached.get("metrics"),
+                    ticker=ticker,
+                    duration=cached.get("duration"),
+                    search_calls=cached.get("search_calls")).get_json())
+            return jsonify(success=True,
+                           investment_takeaway=cached.get("investment_takeaway"),
+                           bull_case=cached.get("bull_case"),
+                           bear_case=cached.get("bear_case"),
+                           search_summary=cached.get("search_summary"),
+                           analytical_reasoning=cached.get("analytical_reasoning"),
+                           executive_summary=cached.get("executive_summary"),
+                           metrics=cached.get("metrics"),
                            ticker=ticker,
-                           duration=cached.get('duration'),
-                           search_calls=cached.get('search_calls'),
-                           executive_summary=cached.get('executive_summary'),
-                           metrics=cached.get('metrics'))
+                           duration=cached.get("duration"),
+                           search_calls=cached.get("search_calls"))
 
         # 🧠 Otherwise, run agent
         result = analyze_and_parse_stock(ticker, verbose=True)
@@ -300,7 +317,17 @@ def analyze_stock_route():
                 "metrics": result['metrics']
             }
             insert_agent_output(ticker, output)
-            return jsonify(success=True, **output)
+            return jsonify(success=True,
+                           investment_takeaway=result['parsed_sections'].get("investment_takeaway"),
+                           bull_case=result['parsed_sections'].get("bull_case"),
+                           bear_case=result['parsed_sections'].get("bear_case"),
+                           search_summary=result['parsed_sections'].get("search_summary"),
+                           analytical_reasoning=result['parsed_sections'].get("analytical_reasoning"),
+                           executive_summary=result.get("executive_summary"),
+                           metrics=result.get("metrics"),
+                           ticker=ticker,
+                           duration=result.get("duration"),
+                           search_calls=result.get("search_calls"))
         else:
             print(f"❌ Analysis failed for {ticker}: {result['error']}")
             return jsonify(success=False, error=result['error'])

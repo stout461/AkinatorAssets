@@ -18,10 +18,15 @@ from pytz import timezone
 from run_watchlist_scriptv2 import main
 from stock_agent import analyze_and_parse_stock
 import traceback
-from agent_cache import get_cached_agent_output, cache_agent_output
+from db_utils import (
+    fetch_latest_agent_output, insert_agent_output,
+    fetch_latest_moat_analysis, insert_moat_analysis
+)
 from flask import Flask, request, jsonify
 import sys
 import os
+from dotenv import load_dotenv
+load_dotenv()
 
 # Import the MOAT analysis function
 from moat_agent import run_moat_analysis_for_web
@@ -195,10 +200,25 @@ def moat_analysis():
         print(f"🏰 Running MOAT analysis for {ticker}...")
 
         # Run MOAT analysis
+        cached = fetch_latest_moat_analysis(ticker)
+        if cached:
+            print(f"📦 Returning cached MOAT for {ticker}")
+            return jsonify({
+                'success': True,
+                'data': {
+                    'ticker': ticker,
+                    'duration': cached['duration'],
+                    'sections': cached['sections']
+                },
+                'error': None
+            })
+
+        # Else run fresh
         result = run_moat_analysis_for_web(ticker)
 
         if result['success']:
             print(f"✅ MOAT analysis completed for {ticker}")
+            insert_moat_analysis(ticker, result["sections"], result["duration"])
             return jsonify({
                 'success': True,
                 'data': {
@@ -255,10 +275,15 @@ def analyze_stock_route():
         print(f"🎯 Starting stock analysis for {ticker}")
 
         # 🧠 Try cache first
-        cached = get_cached_agent_output(ticker)
+        cached = fetch_latest_agent_output(ticker)
         if cached:
             print(f"✅ Returning cached agent result for {ticker}")
-            return jsonify(success=True, **cached)
+            return jsonify(success=True, **cached.get('sections', {}),
+                           ticker=ticker,
+                           duration=cached.get('duration'),
+                           search_calls=cached.get('search_calls'),
+                           executive_summary=cached.get('executive_summary'),
+                           metrics=cached.get('metrics'))
 
         # 🧠 Otherwise, run agent
         result = analyze_and_parse_stock(ticker, verbose=True)
@@ -274,7 +299,7 @@ def analyze_stock_route():
                 "sections": result['parsed_sections'],
                 "metrics": result['metrics']
             }
-            cache_agent_output(ticker, output)
+            insert_agent_output(ticker, output)
             return jsonify(success=True, **output)
         else:
             print(f"❌ Analysis failed for {ticker}: {result['error']}")
@@ -526,4 +551,4 @@ if __name__ == '__main__':
     scheduler.add_job(scheduled_watchlist_run, 'cron', hour=16, minute=30)
     scheduler.start()
 
-    app.run(host='127.0.0.1', port=8080, debug=False)
+    app.run(host='127.0.0.1', port=5000, debug=False)

@@ -18,10 +18,15 @@ from pytz import timezone
 from run_watchlist_scriptv2 import main
 from stock_agent import analyze_and_parse_stock
 import traceback
-from agent_cache import get_cached_agent_output, cache_agent_output
+from db_utils import (
+    fetch_latest_agent_output, insert_agent_output,
+    fetch_latest_moat_analysis, insert_moat_analysis
+)
 from flask import Flask, request, jsonify
 import sys
 import os
+from dotenv import load_dotenv
+load_dotenv()
 
 # Import the MOAT analysis function
 from moat_agent import run_moat_analysis_for_web
@@ -195,10 +200,25 @@ def moat_analysis():
         print(f"🏰 Running MOAT analysis for {ticker}...")
 
         # Run MOAT analysis
+        cached = fetch_latest_moat_analysis(ticker)
+        if cached:
+            print(f"📦 Returning cached MOAT for {ticker}")
+            return jsonify({
+                'success': True,
+                'data': {
+                    'ticker': ticker,
+                    'duration': cached['duration'],
+                    'sections': cached['sections']
+                },
+                'error': None
+            })
+
+        # Else run fresh
         result = run_moat_analysis_for_web(ticker)
 
         if result['success']:
             print(f"✅ MOAT analysis completed for {ticker}")
+            insert_moat_analysis(ticker, result["sections"], result["duration"])
             return jsonify({
                 'success': True,
                 'data': {
@@ -255,10 +275,32 @@ def analyze_stock_route():
         print(f"🎯 Starting stock analysis for {ticker}")
 
         # 🧠 Try cache first
-        cached = get_cached_agent_output(ticker)
+        cached = fetch_latest_agent_output(ticker)
         if cached:
             print(f"✅ Returning cached agent result for {ticker}")
-            return jsonify(success=True, **cached)
+            print("📤 Returning response payload:")
+            print(jsonify(success=True,
+                    investment_takeaway=cached.get("investment_takeaway"),
+                    bull_case=cached.get("bull_case"),
+                    bear_case=cached.get("bear_case"),
+                    search_summary=cached.get("search_summary"),
+                    analytical_reasoning=cached.get("analytical_reasoning"),
+                    executive_summary=cached.get("executive_summary"),
+                    metrics=cached.get("metrics"),
+                    ticker=ticker,
+                    duration=cached.get("duration"),
+                    search_calls=cached.get("search_calls")).get_json())
+            return jsonify(success=True,
+                           investment_takeaway=cached.get("investment_takeaway"),
+                           bull_case=cached.get("bull_case"),
+                           bear_case=cached.get("bear_case"),
+                           search_summary=cached.get("search_summary"),
+                           analytical_reasoning=cached.get("analytical_reasoning"),
+                           executive_summary=cached.get("executive_summary"),
+                           metrics=cached.get("metrics"),
+                           ticker=ticker,
+                           duration=cached.get("duration"),
+                           search_calls=cached.get("search_calls"))
 
         # 🧠 Otherwise, run agent
         result = analyze_and_parse_stock(ticker, verbose=True)
@@ -274,8 +316,18 @@ def analyze_stock_route():
                 "sections": result['parsed_sections'],
                 "metrics": result['metrics']
             }
-            cache_agent_output(ticker, output)
-            return jsonify(success=True, **output)
+            insert_agent_output(ticker, output)
+            return jsonify(success=True,
+                           investment_takeaway=result['parsed_sections'].get("investment_takeaway"),
+                           bull_case=result['parsed_sections'].get("bull_case"),
+                           bear_case=result['parsed_sections'].get("bear_case"),
+                           search_summary=result['parsed_sections'].get("search_summary"),
+                           analytical_reasoning=result['parsed_sections'].get("analytical_reasoning"),
+                           executive_summary=result.get("executive_summary"),
+                           metrics=result.get("metrics"),
+                           ticker=ticker,
+                           duration=result.get("duration"),
+                           search_calls=result.get("search_calls"))
         else:
             print(f"❌ Analysis failed for {ticker}: {result['error']}")
             return jsonify(success=False, error=result['error'])

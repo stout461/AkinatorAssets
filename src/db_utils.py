@@ -10,12 +10,15 @@ load_dotenv()
 DB_CONFIG = {
     "dbname": os.getenv("DB_NAME", "akinator_assets"),
     "user": os.getenv("DB_USER", "akinator_user"),
-    "password": os.getenv("DB_PASSWORD", "your_password"),
+    "password": os.getenv("DB_PASSWORD"),
     "host": os.getenv("DB_HOST", "localhost"),
     "port": os.getenv("DB_PORT", 5432)
 }
 
 def get_connection():
+    print("🧪 Connecting with:")
+    print("  DB_USER =", DB_CONFIG["user"])
+    print("  DB_PASSWORD =", DB_CONFIG["password"])
     return psycopg2.connect(**DB_CONFIG)
 
 def insert_ticker_if_not_exists(ticker):

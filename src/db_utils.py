@@ -4,8 +4,8 @@ import os
 import json
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
-
-load_dotenv()
+from pathlib import Path
+load_dotenv(dotenv_path=Path(__file__).resolve().parent.parent / ".env")
 
 def get_connection():
     return psycopg2.connect(dbname=os.getenv("DB_NAME"),

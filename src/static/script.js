@@ -308,36 +308,38 @@ function updateFinancialStats(response) {
 // New function to display analysis results
 function displayAnalysisResults(response) {
     try {
-        // Convert markdown-style headers and formatting to HTML
+        // Validate data structure
+        if (!response || !response.success || !response.data || !response.data.sections) {
+            throw new Error('Malformed API response');
+        }
+
+        const sections = response.data.sections;
+
         const formatAnalysisText = (text) => {
             if (!text) return '<p class="text-muted">No data available</p>';
-
             return text
-                .replace(/## (.*?)$/gm, '<h3>$1</h3>')  // Convert ## headers to h3
-                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')  // Convert **bold** to <strong>
-                .replace(/\*(.*?)\*/g, '<em>$1</em>')  // Convert *italic* to <em>
-                .replace(/\n\n/g, '</p><p>')  // Convert double newlines to paragraph breaks
-                .replace(/\n/g, '<br>')  // Convert single newlines to <br>
-                .replace(/^/, '<p>')  // Add opening <p> tag
-                .replace(/$/, '</p>');  // Add closing <p> tag
+                .replace(/## (.*?)$/gm, '<h3>$1</h3>')
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                .replace(/\n\n/g, '</p><p>')
+                .replace(/\n/g, '<br>')
+                .replace(/^/, '<p>')
+                .replace(/$/, '</p>');
         };
 
-        // Update each section with formatted content
-        $('#executive-summary').html(formatAnalysisText(response.sections.company_info));
-        $('#bull-case').html(formatAnalysisText(response.sections.bull_case));
-        $('#bear-case').html(formatAnalysisText(response.sections.bear_case));
-        $('#analytical-reasoning').html(formatAnalysisText(response.sections.analytical_reasoning));
+        $('#executive-summary').html(formatAnalysisText(response.data.executive_summary));
+        $('#bull-case').html(formatAnalysisText(sections.bull_case));
+        $('#bear-case').html(formatAnalysisText(sections.bear_case));
+        $('#analytical-reasoning').html(formatAnalysisText(sections.analytical_reasoning));
 
-        // Add success styling
         $('#analysis-container .card-panel').addClass('analysis-success');
-
         console.log('✅ Analysis sections updated successfully');
-
     } catch (error) {
         console.error('Error formatting analysis results:', error);
-        displayAnalysisError('Error formatting analysis results ');
+        displayAnalysisError('Error formatting analysis results');
     }
 }
+
 
 // New function to display analysis errors
 function displayAnalysisError(errorMessage) {

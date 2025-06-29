@@ -84,7 +84,7 @@ def fetch_latest_agent_output(ticker):
         row = cur.fetchone()
         if row:
             raw_output, timestamp = row
-            if timestamp and timestamp >= datetime.now() - timedelta(days=7):
+            if timestamp and timestamp >= datetime.now() - timedelta(days=1000):
                 return raw_output
             else:
                 print(f"⚠️ Cached stock analysis for {ticker} is older than 7 days.")
@@ -149,7 +149,7 @@ def fetch_latest_moat_analysis(ticker):
         row = cur.fetchone()
         if row:
             analysis, duration, generated_at = row
-            if generated_at and generated_at >= datetime.now() - timedelta(days=7):
+            if generated_at and generated_at >= datetime.now() - timedelta(days=1000):
                 return {"sections": analysis, "duration": duration}
             else:
                 print(f"⚠️ Cached moat analysis for {ticker} is older than 7 days.")

@@ -268,75 +268,64 @@ def moat_health():
 @app.route('/analyze_stock', methods=['POST'])
 def analyze_stock_route():
     try:
-        ticker = request.form['ticker'].strip().upper()
+        ticker = request.form.get('ticker', '').strip().upper()
         if not ticker:
-            return jsonify(success=False, error="Please enter a valid ticker symbol")
+            return jsonify(success=False, error="Please enter a valid ticker symbol"), 400
 
-        print(f"🎯 Starting stock analysis for {ticker}")
+        print(f"📊 Running analysis for {ticker}...")
 
-        # 🧠 Try cache first
+        # Step 1: Try cache
         cached = fetch_latest_agent_output(ticker)
         if cached:
-            print(f"✅ Returning cached agent result for {ticker}")
-            print("📤 Returning response payload:")
-            print(jsonify(success=True,
-                    investment_takeaway=cached.get("investment_takeaway"),
-                    bull_case=cached.get("bull_case"),
-                    bear_case=cached.get("bear_case"),
-                    search_summary=cached.get("search_summary"),
-                    analytical_reasoning=cached.get("analytical_reasoning"),
-                    executive_summary=cached.get("executive_summary"),
-                    metrics=cached.get("metrics"),
-                    ticker=ticker,
-                    duration=cached.get("duration"),
-                    search_calls=cached.get("search_calls")).get_json())
-            return jsonify(success=True,
-                           investment_takeaway=cached.get("investment_takeaway"),
-                           bull_case=cached.get("bull_case"),
-                           bear_case=cached.get("bear_case"),
-                           search_summary=cached.get("search_summary"),
-                           analytical_reasoning=cached.get("analytical_reasoning"),
-                           executive_summary=cached.get("executive_summary"),
-                           metrics=cached.get("metrics"),
-                           ticker=ticker,
-                           duration=cached.get("duration"),
-                           search_calls=cached.get("search_calls"))
+            print(f"📦 Using cached analysis for {ticker}")
+            return jsonify({
+                "success": True,
+                "data": {
+                    "ticker": ticker,
+                    "duration": cached.get("duration"),
+                    "search_calls": cached.get("search_calls"),
+                    "executive_summary": cached.get("executive_summary"),
+                    "metrics": cached.get("metrics"),
+                    "sections": cached.get("sections", {})
+                },
+                "error": None
+            })
 
-        # 🧠 Otherwise, run agent
+        # Step 2: Run live agent analysis
         result = analyze_and_parse_stock(ticker, verbose=True)
+        if not result.get('success'):
+            return jsonify(success=False, error=result.get('error', 'Agent analysis failed')), 500
 
-        if result['success']:
-            print(f"✅ Analysis completed for {ticker}")
-            # ⏺️ Save only what's needed
-            output = {
+        # Step 3: Cache result
+        output = {
+            "ticker": ticker,
+            "duration": result['duration'],
+            "search_calls": result['search_calls'],
+            "executive_summary": result['executive_summary'],
+            "sections": result['parsed_sections'],
+            "metrics": result['metrics']
+        }
+        insert_agent_output(ticker, output)
+
+        # Step 4: Return result
+        return jsonify({
+            "success": True,
+            "data": {
                 "ticker": ticker,
                 "duration": result['duration'],
                 "search_calls": result['search_calls'],
                 "executive_summary": result['executive_summary'],
-                "sections": result['parsed_sections'],
-                "metrics": result['metrics']
-            }
-            insert_agent_output(ticker, output)
-            return jsonify(success=True,
-                           investment_takeaway=result['parsed_sections'].get("investment_takeaway"),
-                           bull_case=result['parsed_sections'].get("bull_case"),
-                           bear_case=result['parsed_sections'].get("bear_case"),
-                           search_summary=result['parsed_sections'].get("search_summary"),
-                           analytical_reasoning=result['parsed_sections'].get("analytical_reasoning"),
-                           executive_summary=result.get("executive_summary"),
-                           metrics=result.get("metrics"),
-                           ticker=ticker,
-                           duration=result.get("duration"),
-                           search_calls=result.get("search_calls"))
-        else:
-            print(f"❌ Analysis failed for {ticker}: {result['error']}")
-            return jsonify(success=False, error=result['error'])
+                "metrics": result['metrics'],
+                "sections": result['parsed_sections']
+            },
+            "error": None
+        })
 
     except Exception as e:
-        error_msg = f"Server error during analysis: {str(e)}"
-        print(f"❌ {error_msg}")
+        print(f"❌ Error during analysis for {ticker}: {str(e)}")
         print(traceback.format_exc())
-        return jsonify(success=False, error=error_msg)
+        return jsonify(success=False, error=f"Server error: {str(e)}"), 500
+
 
 @app.route('/')
 def index():

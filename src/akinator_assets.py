@@ -32,9 +32,9 @@ from flask import Flask, request, jsonify
 import sys
 import os
 from dotenv import load_dotenv
+from pathlib import Path
 
-
-load_dotenv()
+load_dotenv(dotenv_path=Path(__file__).resolve().parent.parent / ".env")
 def requires_auth(f):
     @wraps(f)
     def decorated(*args, **kwargs):

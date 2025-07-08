@@ -9,6 +9,16 @@
 </head>
 <body>
 <div class="container-fluid">
+    {% if session.get("user") %}
+    <div class="d-flex justify-content-end mb-3">
+        <span class="me-2">👋 Hello, {{ session["user"]["name"] or session["user"]["email"] }}</span>
+        <a href="/logout" class="btn btn-outline-danger btn-sm">Logout</a>
+    </div>
+    {% else %}
+    <div class="d-flex justify-content-end mb-3">
+        <a href="/login" class="btn btn-primary btn-sm">Login</a>
+    </div>
+    {% endif %}
     <div class="d-flex align-items-stretch mb-4" style="gap: 20px;">
         <!-- Logo Panel -->
         <div class="card-panel d-flex align-items-center justify-content-center" style="width: 160px; flex-shrink: 0;">

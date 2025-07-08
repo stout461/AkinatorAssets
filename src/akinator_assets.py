@@ -6,6 +6,12 @@ import plotly.graph_objs as go
 from datetime import datetime, timedelta
 import webbrowser
 from threading import Timer
+from flask import Flask, session, redirect, url_for, render_template
+from flask_session import Session
+from auth import oauth, auth0
+from functools import wraps
+from flask import session, redirect
+import os
 import requests
 import time
 import random
@@ -26,11 +32,16 @@ from flask import Flask, request, jsonify
 import sys
 import os
 from dotenv import load_dotenv
+
+
 load_dotenv()
-
-# Import the MOAT analysis function
-from moat_agent import run_moat_analysis_for_web
-
+def requires_auth(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if "user" not in session:
+            return redirect("/login")
+        return f(*args, **kwargs)
+    return decorated
 def scheduled_watchlist_run():
     try:
         df = main(return_dataframe=True)
@@ -172,8 +183,49 @@ def open_browser():
 # Add this import at the top of your Flask file
 from moat_agent import run_moat_analysis_for_web
 
+
+
+
+
+app = Flask(__name__)
+app.secret_key = os.getenv("FLASK_SECRET_KEY")
+app.config["SESSION_TYPE"] = "filesystem"
+app.config["SESSION_PERMANENT"] = False
+app.config["SESSION_USE_SIGNER"] = True
+Session(app)
+
+oauth.init_app(app)
+
+@app.route("/login")
+def login():
+    return render_template('login.html')
+
+@app.route('/auth/login')
+def auth_login():
+    return auth0.authorize_redirect(redirect_uri=os.getenv("AUTH0_CALLBACK_URL"))
+@app.route("/callback")
+def callback():
+    token = auth0.authorize_access_token()
+    session["user"] = token["userinfo"]
+    return redirect("/")
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(
+        f"https://{os.getenv('AUTH0_DOMAIN')}/v2/logout?"
+        f"returnTo={url_for('index', _external=True)}&"
+        f"client_id={os.getenv('AUTH0_CLIENT_ID')}"
+    )
+
+@app.route("/dashboard")
+def dashboard():
+    if "user" not in session:
+        return redirect("/login")
+    return render_template("dashboard.html", user=session["user"])
 # Add this route to your Flask app
 @app.route('/api/moat-analysis', methods=['POST'])
+@requires_auth
 def moat_analysis():
     """
     API endpoint for MOAT analysis v2
@@ -246,6 +298,7 @@ def moat_analysis():
 
 # Optional: Add a health check for MOAT analysis
 @app.route('/api/moat-health', methods=['GET'])
+@requires_auth
 def moat_health():
     """Health check for MOAT analysis system"""
     try:
@@ -266,6 +319,7 @@ def moat_health():
         }), 500
 
 @app.route('/analyze_stock', methods=['POST'])
+@requires_auth
 def analyze_stock_route():
     try:
         ticker = request.form.get('ticker', '').strip().upper()
@@ -328,12 +382,14 @@ def analyze_stock_route():
 
 
 @app.route('/')
+@requires_auth
 def index():
     table_data, columns, last_updated = load_watchlist_cache()
     return render_template('index.html', table_data=table_data, columns=columns, last_updated=last_updated)
 
 
 @app.route('/run_watchlist', methods=['POST'])
+@requires_auth
 def run_watchlist():
     try:
         # ✅ Use local main() function, not watchlist_main
@@ -351,6 +407,7 @@ def run_watchlist():
         return jsonify(success=False, error=str(e))
 
 @app.route('/plot', methods=['POST'])
+@requires_auth
 def plot():
     """
     Main endpoint to return the Plotly chart and stock/financial data in JSON

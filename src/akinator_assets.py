@@ -33,8 +33,13 @@ import sys
 import os
 from dotenv import load_dotenv
 from pathlib import Path
+import stripe
+from flask import jsonify, request
+
+
 
 load_dotenv(dotenv_path=Path(__file__).resolve().parent.parent / ".env")
+stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 def requires_auth(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -223,6 +228,35 @@ def dashboard():
     if "user" not in session:
         return redirect("/login")
     return render_template("dashboard.html", user=session["user"])
+
+@app.route("/success")
+def success():
+    return "✅ Payment successful!"
+
+@app.route("/cancel")
+def cancel():
+    return "❌ Payment canceled."
+@app.route("/create-checkout-session", methods=["POST"])
+@requires_auth
+def create_checkout_session():
+    try:
+        checkout_session = stripe.checkout.Session.create(
+            payment_method_types=["card"],
+            mode="subscription",  # or "payment" for one-time
+            line_items=[
+                {
+                    "price": os.getenv("STRIPE_PRICE_ID"),
+                    "quantity": 1,
+                }
+            ],
+            success_url=os.getenv("DOMAIN_URL") + "/success",
+            cancel_url=os.getenv("DOMAIN_URL") + "/cancel",
+            customer_email=session["user"]["email"],
+        )
+        return jsonify({"url": checkout_session.url})
+    except Exception as e:
+        print("❌ Stripe error:", e)
+        return jsonify(error=str(e)), 500
 # Add this route to your Flask app
 @app.route('/api/moat-analysis', methods=['POST'])
 @requires_auth

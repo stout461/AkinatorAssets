@@ -709,3 +709,26 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }, 1000);
 });
+
+document.addEventListener("DOMContentLoaded", function () {
+    const subscribeBtn = document.getElementById("subscribe-button");
+    if (subscribeBtn) {
+        subscribeBtn.addEventListener("click", async function (e) {
+            e.preventDefault();
+            try {
+                const res = await fetch("/create-checkout-session", {
+                    method: "POST",
+                });
+                const data = await res.json();
+                if (data.url) {
+                    window.location.href = data.url;
+                } else {
+                    alert("Checkout failed: " + (data.error || "Unknown error"));
+                }
+            } catch (err) {
+                console.error("Stripe checkout error:", err);
+                alert("There was a problem creating the checkout session.");
+            }
+        });
+    }
+});

@@ -51,10 +51,25 @@ jobs:
           script: |
             set -e
             
-            echo "🚀 Starting deployment to ${{ env.ENV }} environment..."
+            # Set environment variables based on branch/input
+            if [[ "${{ github.ref_name }}" == "main" ]] || [[ "${{ github.event.inputs.environment }}" == "production" ]]; then
+              ENV=production
+              APP_DIR=/opt/akinator/production/src
+              SERVICE_NAME=akinator-production
+              GUNICORN_PORT=8080
+              DOMAIN=www.akinatorassets.com
+            else
+              ENV=staging
+              APP_DIR=/opt/akinator/staging/src
+              SERVICE_NAME=akinator-staging
+              GUNICORN_PORT=8081
+              DOMAIN=staging.akinatorassets.com
+            fi
+            
+            echo "🚀 Starting deployment to $ENV environment..."
             
             # Create app directory if it doesn't exist
-            sudo mkdir -p ${{ env.APP_DIR }}
+            sudo mkdir -p $APP_DIR
             
             # Navigate to the git repository
             cd ~/AkinatorAssets
@@ -64,7 +79,7 @@ jobs:
             git fetch origin
             
             # Checkout the appropriate branch
-            if [[ "${{ env.ENV }}" == "production" ]]; then
+            if [[ "$ENV" == "production" ]]; then
               git checkout main
               git pull origin main
             else
@@ -74,40 +89,18 @@ jobs:
             
             # Copy source code to deployment directory
             echo "📋 Copying source code..."
-            sudo cp -r src/* ${{ env.APP_DIR }}/
+            sudo cp -r src/* $APP_DIR/
             
             # Set proper ownership
-            sudo chown -R ubuntu:ubuntu ${{ env.APP_DIR }}
+            sudo chown -R ubuntu:ubuntu $APP_DIR
             
             # Install/update dependencies
             echo "📦 Installing dependencies..."
-            cd ${{ env.APP_DIR }}
+            cd $APP_DIR
             ~/venv/bin/pip install -r requirements.txt
             
             # Create/update .env file for the environment Commenting this out for now, Probably come back to this later.
-#            echo "⚙️ Setting up environment variables..."
-#            if [[ "${{ env.ENV }}" == "production" ]]; then
-#              # Production environment variables
-#              cat > .env << 'ENVEOF'
-#            AUTH0_DOMAIN=${{ secrets.PROD_AUTH0_DOMAIN }}
-#            AUTH0_CLIENT_ID=${{ secrets.PROD_AUTH0_CLIENT_ID }}
-#            AUTH0_CLIENT_SECRET=${{ secrets.PROD_AUTH0_CLIENT_SECRET }}
-#            FLASK_SECRET_KEY=${{ secrets.PROD_FLASK_SECRET_KEY }}
-#            FLASK_ENV=production
-#            GUNICORN_PORT=8080
-#            ENVEOF
-#            else
-#              # Staging environment variables
-#              cat > .env << 'ENVEOF'
-#            AUTH0_DOMAIN=${{ secrets.STAGING_AUTH0_DOMAIN }}
-#            AUTH0_CLIENT_ID=${{ secrets.STAGING_AUTH0_CLIENT_ID }}
-#            AUTH0_CLIENT_SECRET=${{ secrets.STAGING_AUTH0_CLIENT_SECRET }}
-#            FLASK_SECRET_KEY=${{ secrets.STAGING_FLASK_SECRET_KEY }}
-#            FLASK_ENV=staging
-#            GUNICORN_PORT=8081
-#            ENVEOF
-#            fi
-            
+
             # Test the application
             echo "🧪 Testing application..."
             ~/venv/bin/python -c "import akinator_assets; print('✅ Application imports successfully')"

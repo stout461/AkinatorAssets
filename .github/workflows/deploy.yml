@@ -1,25 +1,226 @@
-name: Deploy to EC2
+name: Deploy Akinator Assets Service
 
 on:
   push:
     branches:
-      - main
+      - main        # Deploy to production
+      - staging     # Deploy to staging
+  workflow_dispatch:  # Allow manual deployments
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
-    steps:
-    - name: Checkout Repo
-      uses: actions/checkout@v3
+    environment: ${{ github.ref_name == 'main' && 'production' || 'staging' }}
 
-    - name: Deploy via SSH
-      uses: appleboy/ssh-action@v1.0.0
-      with:
-        host: ${{ secrets.EC2_HOST }}
-        username: ubuntu
-        key: ${{ secrets.EC2_SSH_KEY }}
-        script: |
-          cd ~/AkinatorAssets
-          git pull origin main
-          sudo systemctl restart akinator
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set environment variables
+        run: |
+          if [[ "${{ github.ref_name }}" == "main" ]] || [[ "${{ github.event.inputs.environment }}" == "production" ]]; then
+            echo "ENV=production" >> $GITHUB_ENV
+            echo "APP_DIR=/opt/akinator/production/src" >> $GITHUB_ENV
+            echo "SERVICE_NAME=akinator-production" >> $GITHUB_ENV
+            echo "GUNICORN_PORT=8080" >> $GITHUB_ENV
+            echo "DOMAIN=www.akinatorassets.com" >> $GITHUB_ENV
+          else
+            echo "ENV=staging" >> $GITHUB_ENV
+            echo "APP_DIR=/opt/akinator/staging/src" >> $GITHUB_ENV
+            echo "SERVICE_NAME=akinator-staging" >> $GITHUB_ENV
+            echo "GUNICORN_PORT=8081" >> $GITHUB_ENV
+            echo "DOMAIN=staging.akinatorassets.com" >> $GITHUB_ENV
+          fi
+
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            set -e
+            
+            echo "🚀 Starting deployment to ${{ env.ENV }} environment..."
+            
+            # Create app directory if it doesn't exist
+            sudo mkdir -p ${{ env.APP_DIR }}
+            
+            # Navigate to the git repository
+            cd ~/AkinatorAssets
+            
+            # Fetch latest changes
+            echo "📥 Fetching latest code..."
+            git fetch origin
+            
+            # Checkout the appropriate branch
+            if [[ "${{ env.ENV }}" == "production" ]]; then
+              git checkout main
+              git pull origin main
+            else
+              git checkout staging
+              git pull origin staging
+            fi
+            
+            # Copy source code to deployment directory
+            echo "📋 Copying source code..."
+            sudo cp -r src/* ${{ env.APP_DIR }}/
+            
+            # Set proper ownership
+            sudo chown -R ubuntu:ubuntu ${{ env.APP_DIR }}
+            
+            # Install/update dependencies
+            echo "📦 Installing dependencies..."
+            cd ${{ env.APP_DIR }}
+            ~/venv/bin/pip install -r requirements.txt
+            
+            # Create/update .env file for the environment Commenting this out for now, Probably come back to this later.
+#            echo "⚙️ Setting up environment variables..."
+#            if [[ "${{ env.ENV }}" == "production" ]]; then
+#              # Production environment variables
+#              cat > .env << 'ENVEOF'
+#            AUTH0_DOMAIN=${{ secrets.PROD_AUTH0_DOMAIN }}
+#            AUTH0_CLIENT_ID=${{ secrets.PROD_AUTH0_CLIENT_ID }}
+#            AUTH0_CLIENT_SECRET=${{ secrets.PROD_AUTH0_CLIENT_SECRET }}
+#            FLASK_SECRET_KEY=${{ secrets.PROD_FLASK_SECRET_KEY }}
+#            FLASK_ENV=production
+#            GUNICORN_PORT=8080
+#            ENVEOF
+#            else
+#              # Staging environment variables
+#              cat > .env << 'ENVEOF'
+#            AUTH0_DOMAIN=${{ secrets.STAGING_AUTH0_DOMAIN }}
+#            AUTH0_CLIENT_ID=${{ secrets.STAGING_AUTH0_CLIENT_ID }}
+#            AUTH0_CLIENT_SECRET=${{ secrets.STAGING_AUTH0_CLIENT_SECRET }}
+#            FLASK_SECRET_KEY=${{ secrets.STAGING_FLASK_SECRET_KEY }}
+#            FLASK_ENV=staging
+#            GUNICORN_PORT=8081
+#            ENVEOF
+#            fi
+            
+            # Test the application
+            echo "🧪 Testing application..."
+            ~/venv/bin/python -c "import akinator_assets; print('✅ Application imports successfully')"
+            
+            # Reload systemd and restart the service
+            echo "🔄 Restarting service..."
+            sudo systemctl daemon-reload
+            sudo systemctl restart ${{ env.SERVICE_NAME }}
+            
+            # Wait a moment for service to start
+            sleep 5
+            
+            # Check service status
+            if sudo systemctl is-active --quiet ${{ env.SERVICE_NAME }}; then
+              echo "✅ Service ${{ env.SERVICE_NAME }} is running"
+            else
+              echo "❌ Service ${{ env.SERVICE_NAME }} failed to start"
+              sudo systemctl status ${{ env.SERVICE_NAME }}
+              exit 1
+            fi
+            
+            # Test the endpoint
+            echo "🌐 Testing endpoint..."
+            if curl -f -s -o /dev/null http://127.0.0.1:${{ env.GUNICORN_PORT }}; then
+              echo "✅ Application is responding on port ${{ env.GUNICORN_PORT }}"
+            else
+              echo "❌ Application is not responding on port ${{ env.GUNICORN_PORT }}"
+              exit 1
+            fi
+            
+            echo "🎉 Deployment to ${{ env.ENV }} completed successfully!"
+
+      - name: Verify deployment
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            echo "🔍 Verifying deployment..."
+            
+            # Test the public endpoint
+            if [[ "${{ env.ENV }}" == "production" ]]; then
+              ENDPOINT="https://${{ env.DOMAIN }}"
+            else
+              ENDPOINT="http://${{ env.DOMAIN }}"
+            fi
+            
+            echo "Testing endpoint: $ENDPOINT"
+            
+            # Wait a bit more for everything to settle
+            sleep 10
+            
+            # Test with retries
+            for i in {1..5}; do
+              if curl -f -s -o /dev/null "$ENDPOINT"; then
+                echo "✅ ${{ env.DOMAIN }} is accessible"
+                break
+              else
+                echo "⏳ Attempt $i/5 failed, retrying in 10 seconds..."
+                sleep 10
+              fi
+            
+              if [[ $i -eq 5 ]]; then
+                echo "❌ Failed to verify deployment after 5 attempts"
+                exit 1
+              fi
+            done
+
+      - name: Notify deployment status
+        if: always()
+        run: |
+          if [[ "${{ job.status }}" == "success" ]]; then
+            echo "✅ Deployment to ${{ env.ENV }} was successful!"
+            echo "🌐 Service is available at: ${{ env.ENV == 'production' && 'https' || 'http' }}://${{ env.DOMAIN }}"
+          else
+            echo "❌ Deployment to ${{ env.ENV }} failed!"
+          fi
+
+  # Optional: Run health checks after deployment
+  health-check:
+    needs: deploy
+    runs-on: ubuntu-latest
+    if: success()
+
+    steps:
+      - name: Set environment variables
+        run: |
+          if [[ "${{ github.ref_name }}" == "main" ]] || [[ "${{ github.event.inputs.environment }}" == "production" ]]; then
+            echo "ENV=production" >> $GITHUB_ENV
+            echo "DOMAIN=www.akinatorassets.com" >> $GITHUB_ENV
+            echo "PROTOCOL=https" >> $GITHUB_ENV
+          else
+            echo "ENV=staging" >> $GITHUB_ENV
+            echo "DOMAIN=staging.akinatorassets.com" >> $GITHUB_ENV
+            echo "PROTOCOL=http" >> $GITHUB_ENV
+          fi
+
+      - name: Extended health check
+        run: |
+          echo "🏥 Running extended health checks for ${{ env.ENV }}..."
+          
+          # Test response time
+          RESPONSE_TIME=$(curl -o /dev/null -s -w '%{time_total}' ${{ env.PROTOCOL }}://${{ env.DOMAIN }})
+          echo "⏱️ Response time: ${RESPONSE_TIME}s"
+          
+          # Test status code
+          STATUS_CODE=$(curl -o /dev/null -s -w '%{http_code}' ${{ env.PROTOCOL }}://${{ env.DOMAIN }})
+          echo "📊 Status code: $STATUS_CODE"
+          
+          if [[ "$STATUS_CODE" -ge 200 && "$STATUS_CODE" -lt 300 ]]; then
+            echo "✅ Health check passed!"
+          else
+            echo "❌ Health check failed with status code: $STATUS_CODE"
+            exit 1
+          fi

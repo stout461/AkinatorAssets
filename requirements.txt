@@ -15,3 +15,4 @@ matplotlib~=3.10.3
 plotly~=6.2.0
 APScheduler~=3.11.0
 pytz~=2025.2
+auth~=0.5.3

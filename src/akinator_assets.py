@@ -32,9 +32,8 @@ from flask import Flask, request, jsonify
 import sys
 import os
 from dotenv import load_dotenv
-from pathlib import Path
 
-load_dotenv(dotenv_path=Path(__file__).resolve().parent.parent / ".env")
+load_dotenv()
 def requires_auth(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -624,4 +623,4 @@ if __name__ == '__main__':
     scheduler.add_job(scheduled_watchlist_run, 'cron', hour=16, minute=30)
     scheduler.start()
 
-    app.run(host='127.0.0.1', port=8080, debug=False)
+    app.run(host=os.getenv('FLASK_RUN_HOST', '127.0.0.1'), port=os.getenv('GUNICORN_PORT', 8080), debug=os.getenv('FLASK_DEBUG', 'False') == 'True')

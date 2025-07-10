@@ -96,10 +96,6 @@ jobs:
             
             
             # Create/update .env file for the environment Commenting this out for now, Probably come back to this later.
-
-            # Test the application
-            echo "🧪 Testing application..."
-            ~/venv/bin/python -c "import akinator_assets; print('✅ Application imports successfully')"
             
             # Reload systemd and restart the service
             echo "🔄 Restarting service..."

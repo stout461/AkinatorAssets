@@ -94,10 +94,6 @@ jobs:
             # Set proper ownership
             sudo chown -R ubuntu:ubuntu $APP_DIR
             
-            # Install/update dependencies
-            echo "📦 Installing dependencies..."
-            cd $APP_DIR
-            ~/venv/bin/pip install -r requirements.txt
             
             # Create/update .env file for the environment Commenting this out for now, Probably come back to this later.
 

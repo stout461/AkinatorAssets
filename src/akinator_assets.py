@@ -331,6 +331,7 @@ def analyze_stock_route():
         cached = fetch_latest_agent_output(ticker)
         if cached:
             print(f"📦 Using cached analysis for {ticker}")
+            print(f"Debug: Cached output structure: {json.dumps(cached, indent=2)}")
             return jsonify({
                 "success": True,
                 "data": {
@@ -349,7 +350,7 @@ def analyze_stock_route():
         if not result.get('success'):
             return jsonify(success=False, error=result.get('error', 'Agent analysis failed')), 500
 
-        # Step 3: Cache result
+        # Step 3: Store result in database
         output = {
             "ticker": ticker,
             "duration": result['duration'],
@@ -358,18 +359,24 @@ def analyze_stock_route():
             "sections": result['parsed_sections'],
             "metrics": result['metrics']
         }
+        print(f"Debug: Live output structure before storing: {json.dumps(output, indent=2)}")
         insert_agent_output(ticker, output)
 
-        # Step 4: Return result
+        # Step 4: Immediately retrieve from database to ensure consistent formatting
+        cached = fetch_latest_agent_output(ticker)
+        if not cached:
+            return jsonify(success=False, error="Failed to retrieve stored analysis"), 500
+
+        print(f"Debug: Retrieved stored output structure: {json.dumps(cached, indent=2)}")
         return jsonify({
             "success": True,
             "data": {
                 "ticker": ticker,
-                "duration": result['duration'],
-                "search_calls": result['search_calls'],
-                "executive_summary": result['executive_summary'],
-                "metrics": result['metrics'],
-                "sections": result['parsed_sections']
+                "duration": cached.get("duration"),
+                "search_calls": cached.get("search_calls"),
+                "executive_summary": cached.get("executive_summary"),
+                "metrics": cached.get("metrics"),
+                "sections": cached.get("sections", {})
             },
             "error": None
         })

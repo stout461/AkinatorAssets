@@ -1,4 +1,3 @@
-
 import psycopg2
 import os
 import json
@@ -78,16 +77,22 @@ def fetch_latest_agent_output(ticker):
         ticker_id = result[0]
 
         cur.execute(
-            "SELECT raw_output, timestamp FROM agent_outputs WHERE ticker_id = %s ORDER BY timestamp DESC LIMIT 1;",
+            "SELECT raw_output, timestamp, created_at FROM agent_outputs WHERE ticker_id = %s ORDER BY timestamp DESC LIMIT 1;",
             (ticker_id,)
         )
         row = cur.fetchone()
         if row:
-            raw_output, timestamp = row
-            if timestamp and timestamp >= datetime.now() - timedelta(days=1000):
+            raw_output, timestamp, created_at = row
+            # Use timestamp if available, otherwise use created_at
+            analysis_time = timestamp if timestamp else created_at
+            if analysis_time and analysis_time >= datetime.now() - timedelta(days=1000):
+                # Add the timestamp to the raw output
+                if isinstance(raw_output, dict):
+                    raw_output['timestamp'] = analysis_time.isoformat() if analysis_time else None
+                    raw_output['created_at'] = created_at.isoformat() if created_at else None
                 return raw_output
             else:
-                print(f"⚠️ Cached stock analysis for {ticker} is older than 7 days.")
+                print(f"⚠️ Cached stock analysis for {ticker} is older than 1000 days.")
         return None
     finally:
         cur.close()
@@ -150,9 +155,13 @@ def fetch_latest_moat_analysis(ticker):
         if row:
             analysis, duration, generated_at = row
             if generated_at and generated_at >= datetime.now() - timedelta(days=1000):
-                return {"sections": analysis, "duration": duration}
+                return {
+                    "sections": analysis,
+                    "duration": duration,
+                    "timestamp": generated_at.isoformat() if generated_at else None
+                }
             else:
-                print(f"⚠️ Cached moat analysis for {ticker} is older than 7 days.")
+                print(f"⚠️ Cached moat analysis for {ticker} is older than 1000 days.")
         return None
     finally:
         cur.close()

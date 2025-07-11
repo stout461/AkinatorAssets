@@ -423,3 +423,30 @@ h1 {
         height: 250px; /* Even smaller on mobile */
     }
 }
+
+<style>
+.analysis-timestamp {
+    font-size: 0.75rem;
+    color: #6c757d;
+}
+
+.refresh-btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+}
+
+.gap-2 {
+    gap: 0.5rem;
+}
+
+.timestamp-fresh {
+    color: #28a745;
+}
+
+.timestamp-old {
+    color: #ffc107;
+}
+
+.timestamp-stale {
+    color: #dc3545;
+}

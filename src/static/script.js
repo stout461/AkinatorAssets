@@ -194,6 +194,7 @@ function fetchStockData() {
         return;
     }
 
+    resetMOATAnalysis();
     // Show loading states
     $('#loading').show();
     $('#analysis-loading').show();
@@ -267,6 +268,8 @@ function fetchStockData() {
 
         if (response.success) {
             displayAnalysisResults(response);
+            updateAnalysisTimestamp(response.data);
+            setupAnalysisRefreshButton();
             $('#analysis-container').show();
             console.log(`✅ Analysis completed in ${response.duration}s with ${response.search_calls} searches`);
         } else {
@@ -333,6 +336,8 @@ function displayAnalysisResults(response) {
         $('#analytical-reasoning').html(formatAnalysisText(sections.analytical_reasoning));
 
         $('#analysis-container .card-panel').addClass('analysis-success');
+        updateAnalysisTimestamp(response.data);
+        setupAnalysisRefreshButton();
         console.log('✅ Analysis sections updated successfully');
     } catch (error) {
         console.error('Error formatting analysis results:', error);
@@ -479,6 +484,8 @@ function displayMOATAnalysis(data) {
     populateMOATSection('moat-analysis-content', data.sections.moat_analysis);
     populateMOATSection('market-positioning-content', data.sections.market_positioning);
     populateMOATSection('competitive-landscape-content', data.sections.competitive_landscape);
+    updateMOATTimestamp();
+    setupMOATRefreshButton();
 
     // Update title
     const mainTitle = document.querySelector('.col-lg-9 .card-panel h5');
@@ -490,6 +497,8 @@ function displayMOATAnalysis(data) {
     setTimeout(() => {
         switchMOATTab('executive');
     }, 500);
+    updateMOATTimestamp(data);  // Pass the data object
+    setupMOATRefreshButton();
 }
 
 function populateMOATSection(elementId, content) {
@@ -709,3 +718,153 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }, 1000);
 });
+
+function updateAnalysisTimestamp(response) {
+    const timestampElement = document.getElementById('analysis-timestamp');
+    if (timestampElement && response &&  response.timestamp) {
+        const dbTimestamp = new Date(response.timestamp);
+        const dateString = dbTimestamp.toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric'
+        });
+        const timeString = dbTimestamp.toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+        });
+        timestampElement.textContent = `Last updated: ${dateString} at ${timeString}`;
+    }
+}
+
+
+// Function to show and setup the refresh button
+function setupAnalysisRefreshButton() {
+    const refreshBtn = document.getElementById('refresh-analysis-btn');
+    if (refreshBtn) {
+        // Show the button
+        refreshBtn.style.display = 'inline-block';
+
+        // Remove any existing click handlers to prevent duplicates
+        refreshBtn.removeEventListener('click', handleAnalysisRefresh);
+
+        // Add click handler
+        refreshBtn.addEventListener('click', handleAnalysisRefresh);
+    }
+}
+
+// Handle refresh button click
+function handleAnalysisRefresh() {
+    const ticker = $('#ticker').val().trim();
+    if (!ticker) {
+        alert('Please enter a ticker symbol first');
+        return;
+    }
+
+    console.log(`🔄 Refreshing analysis for ${ticker}...`);
+
+    // Show loading state
+    $('#analysis-loading').show();
+    $('#analysis-container .card-panel').removeClass('analysis-success');
+
+    // Make fresh analysis request
+    const analysisRequest = $.ajax({
+        url: '/analyze_stock',
+        type: 'POST',
+        data: {
+            ticker: ticker,
+            force_refresh: true // Add this parameter to bypass any caching
+        }
+    });
+
+    analysisRequest.done(function(response) {
+        $('#analysis-loading').hide();
+
+        if (response.success) {
+            displayAnalysisResults(response);
+            updateAnalysisTimestamp(response.data);  // Pass the response object
+            setupAnalysisRefreshButton();
+            console.log(`✅ Analysis refreshed in ${response.duration}s with ${response.search_calls} searches`);
+        } else {
+            displayAnalysisError(response.error);
+        }
+    });
+
+    analysisRequest.fail(function(error) {
+        $('#analysis-loading').hide();
+        displayAnalysisError('Analysis refresh failed. Please check your connection and try again.');
+    });
+}
+
+// Function to update MOAT analysis timestamp
+function updateMOATTimestamp(data) {
+    const timestampElement = document.getElementById('moat-timestamp');
+    if (timestampElement && data && data.timestamp) {
+        const dbTimestamp = new Date(data.timestamp);
+        const dateString = dbTimestamp.toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric'
+        });
+        const timeString = dbTimestamp.toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+        });
+        timestampElement.textContent = `Last updated: ${dateString} at ${timeString}`;
+    }
+}
+
+// Function to show and setup the MOAT refresh button
+function setupMOATRefreshButton() {
+    const refreshBtn = document.getElementById('refresh-moat-btn');
+    if (refreshBtn) {
+        // Show the button
+        refreshBtn.style.display = 'inline-block';
+
+        // Remove any existing click handlers to prevent duplicates
+        refreshBtn.removeEventListener('click', handleMOATRefresh);
+
+        // Add click handler
+        refreshBtn.addEventListener('click', handleMOATRefresh);
+    }
+}
+
+// Handle MOAT refresh button click
+function handleMOATRefresh() {
+    const ticker = $('#ticker').val().trim();
+    if (!ticker) {
+        alert('Please enter a ticker symbol first');
+        return;
+    }
+
+    console.log(`🔄 Refreshing MOAT analysis for ${ticker}...`);
+
+    // Show loading state
+    showMOATLoading();
+
+    // Make fresh MOAT analysis request
+    fetch('/api/moat-analysis', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            ticker: ticker,
+            force_refresh: true // Add this parameter to bypass any caching
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('MOAT Analysis Refresh Response:', data);
+        if (data.success) {
+            displayMOATAnalysis(data.data);
+        } else {
+            showMOATError(data.error || 'MOAT analysis refresh failed');
+        }
+    })
+    .catch(error => {
+        console.error('MOAT Analysis Refresh Error:', error);
+        showMOATError('Failed to connect to MOAT analysis service');
+    });
+}

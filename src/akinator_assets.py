@@ -227,8 +227,8 @@ def dashboard():
 @requires_auth
 def moat_analysis():
     """
-    API endpoint for MOAT analysis v2
-    Expects: {"ticker": "AAPL"}
+    API endpoint for MOAT analysis v2 with force refresh capability
+    Expects: {"ticker": "AAPL", "force_refresh": false}
     Returns: {"success": bool, "data": {...}, "error": str}
     """
     try:
@@ -241,6 +241,7 @@ def moat_analysis():
             }), 400
 
         ticker = data['ticker'].strip().upper()
+        force_refresh = data.get('force_refresh', False)
 
         if not ticker:
             return jsonify({
@@ -248,34 +249,41 @@ def moat_analysis():
                 'error': 'Valid ticker is required'
             }), 400
 
-        print(f"🏰 Running MOAT analysis for {ticker}...")
+        print(f"🏰 Running MOAT analysis for {ticker} (force_refresh: {force_refresh})...")
 
-        # Run MOAT analysis
-        cached = fetch_latest_moat_analysis(ticker)
-        if cached:
-            print(f"📦 Returning cached MOAT for {ticker}")
-            return jsonify({
-                'success': True,
-                'data': {
-                    'ticker': ticker,
-                    'duration': cached['duration'],
-                    'sections': cached['sections']
-                },
-                'error': None
-            })
+        # Run MOAT analysis - check cache only if not forcing refresh
+        if not force_refresh:
+            cached = fetch_latest_moat_analysis(ticker)
+            if cached:
+                print(f"📦 Returning cached MOAT for {ticker}")
+                return jsonify({
+                    'success': True,
+                    'data': {
+                        'ticker': ticker,
+                        'duration': cached['duration'],
+                        'sections': cached['sections'],
+                        'timestamp': cached.get('timestamp'),
+                        'is_cached': True
+                    },
+                    'error': None
+                })
 
-        # Else run fresh
+        # Run fresh analysis
+        print(f"🔄 Running fresh MOAT analysis for {ticker}...")
         result = run_moat_analysis_for_web(ticker)
 
         if result['success']:
             print(f"✅ MOAT analysis completed for {ticker}")
+            timestamp = datetime.now().isoformat()
             insert_moat_analysis(ticker, result["sections"], result["duration"])
             return jsonify({
                 'success': True,
                 'data': {
                     'ticker': result['ticker'],
                     'duration': result['duration'],
-                    'sections': result['sections']
+                    'sections': result['sections'],
+                    'timestamp': timestamp,
+                    'is_cached': False
                 },
                 'error': None
             })
@@ -322,30 +330,35 @@ def moat_health():
 def analyze_stock_route():
     try:
         ticker = request.form.get('ticker', '').strip().upper()
+        force_refresh = request.form.get('force_refresh', 'false').lower() == 'true'
+
         if not ticker:
             return jsonify(success=False, error="Please enter a valid ticker symbol"), 400
 
-        print(f"📊 Running analysis for {ticker}...")
+        print(f"📊 Running analysis for {ticker} (force_refresh: {force_refresh})...")
 
-        # Step 1: Try cache
-        cached = fetch_latest_agent_output(ticker)
-        if cached:
-            print(f"📦 Using cached analysis for {ticker}")
-            print(f"Debug: Cached output structure: {json.dumps(cached, indent=2)}")
-            return jsonify({
-                "success": True,
-                "data": {
-                    "ticker": ticker,
-                    "duration": cached.get("duration"),
-                    "search_calls": cached.get("search_calls"),
-                    "executive_summary": cached.get("executive_summary"),
-                    "metrics": cached.get("metrics"),
-                    "sections": cached.get("sections", {})
-                },
-                "error": None
-            })
+        # Step 1: Try cache only if not forcing refresh
+        if not force_refresh:
+            cached = fetch_latest_agent_output(ticker)
+            if cached:
+                print(f"📦 Using cached analysis for {ticker}")
+                return jsonify({
+                    "success": True,
+                    "data": {
+                        "ticker": ticker,
+                        "duration": cached.get("duration"),
+                        "search_calls": cached.get("search_calls"),
+                        "executive_summary": cached.get("executive_summary"),
+                        "metrics": cached.get("metrics"),
+                        "sections": cached.get("sections", {}),
+                        "timestamp": cached.get("timestamp"),
+                        "is_cached": True
+                    },
+                    "error": None
+                })
 
         # Step 2: Run live agent analysis
+        print(f"🔄 Running fresh analysis for {ticker}...")
         result = analyze_and_parse_stock(ticker, verbose=True)
         if not result.get('success'):
             return jsonify(success=False, error=result.get('error', 'Agent analysis failed')), 500
@@ -357,9 +370,9 @@ def analyze_stock_route():
             "search_calls": result['search_calls'],
             "executive_summary": result['executive_summary'],
             "sections": result['parsed_sections'],
-            "metrics": result['metrics']
+            "metrics": result['metrics'],
+            "timestamp": datetime.now().isoformat()
         }
-        print(f"Debug: Live output structure before storing: {json.dumps(output, indent=2)}")
         insert_agent_output(ticker, output)
 
         # Step 4: Immediately retrieve from database to ensure consistent formatting
@@ -367,7 +380,6 @@ def analyze_stock_route():
         if not cached:
             return jsonify(success=False, error="Failed to retrieve stored analysis"), 500
 
-        print(f"Debug: Retrieved stored output structure: {json.dumps(cached, indent=2)}")
         return jsonify({
             "success": True,
             "data": {
@@ -376,10 +388,17 @@ def analyze_stock_route():
                 "search_calls": cached.get("search_calls"),
                 "executive_summary": cached.get("executive_summary"),
                 "metrics": cached.get("metrics"),
-                "sections": cached.get("sections", {})
+                "sections": cached.get("sections", {}),
+                "timestamp": cached.get("timestamp"),
+                "is_cached": False
             },
             "error": None
         })
+
+    except Exception as e:
+        print(f"❌ Error during analysis for {ticker}: {str(e)}")
+        print(traceback.format_exc())
+        return jsonify(success=False, error=f"Server error: {str(e)}"), 500
 
     except Exception as e:
         print(f"❌ Error during analysis for {ticker}: {str(e)}")

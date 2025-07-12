@@ -415,7 +415,105 @@
         </div>
     </div>
 
-    <!-- Fibonacci Settings -->
+    <!-- ADD THE MOVING AVERAGES UI HERE -->
+    <div class="card-panel">
+        <h6 class="mb-3">📊 Moving Averages</h6>
+
+        <!-- Quick Preset Buttons -->
+        <div class="mb-3">
+            <label class="form-label">Quick Presets:</label>
+            <div class="btn-group" role="group">
+                <button type="button" class="btn btn-outline-primary btn-sm" id="ma-preset-none">None</button>
+                <button type="button" class="btn btn-outline-primary btn-sm" id="ma-preset-basic">Basic (20, 50)</button>
+                <button type="button" class="btn btn-outline-primary btn-sm" id="ma-preset-extended">Extended (20, 50, 200)</button>
+                <button type="button" class="btn btn-outline-primary btn-sm" id="ma-preset-day-trading">Day Trading (5, 10, 20)</button>
+            </div>
+        </div>
+
+        <!-- Individual Moving Average Checkboxes -->
+        <div class="mb-3">
+            <label class="form-label">Individual Moving Averages:</label>
+            <div class="row">
+                <div class="col-md-2">
+                    <div class="form-check">
+                        <input class="form-check-input ma-checkbox" type="checkbox" value="5" id="ma-5">
+                        <label class="form-check-label" for="ma-5">
+                            <span class="ma-color-indicator" style="background-color: #FF6B6B;"></span>
+                            MA5
+                        </label>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-check">
+                        <input class="form-check-input ma-checkbox" type="checkbox" value="10" id="ma-10">
+                        <label class="form-check-label" for="ma-10">
+                            <span class="ma-color-indicator" style="background-color: #4ECDC4;"></span>
+                            MA10
+                        </label>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-check">
+                        <input class="form-check-input ma-checkbox" type="checkbox" value="20" id="ma-20">
+                        <label class="form-check-label" for="ma-20">
+                            <span class="ma-color-indicator" style="background-color: #45B7D1;"></span>
+                            MA20
+                        </label>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-check">
+                        <input class="form-check-input ma-checkbox" type="checkbox" value="50" id="ma-50">
+                        <label class="form-check-label" for="ma-50">
+                            <span class="ma-color-indicator" style="background-color: #96CEB4;"></span>
+                            MA50
+                        </label>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-check">
+                        <input class="form-check-input ma-checkbox" type="checkbox" value="100" id="ma-100">
+                        <label class="form-check-label" for="ma-100">
+                            <span class="ma-color-indicator" style="background-color: #FFEAA7;"></span>
+                            MA100
+                        </label>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-check">
+                        <input class="form-check-input ma-checkbox" type="checkbox" value="200" id="ma-200">
+                        <label class="form-check-label" for="ma-200">
+                            <span class="ma-color-indicator" style="background-color: #DDA0DD;"></span>
+                            MA200
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Custom Moving Average Input -->
+        <div class="mb-3">
+            <label class="form-label">Custom Moving Average:</label>
+            <div class="input-group" style="max-width: 300px;">
+                <input type="number" class="form-control" id="custom-ma-input" placeholder="Enter period (e.g., 30)" min="1" max="500">
+                <button class="btn btn-outline-secondary" type="button" id="add-custom-ma">Add</button>
+            </div>
+        </div>
+
+        <!-- Custom MAs Display -->
+        <div id="custom-ma-display" style="display: none;">
+            <label class="form-label">Custom MAs:</label>
+            <div id="custom-ma-list" class="mb-2"></div>
+        </div>
+
+        <!-- Auto-refresh toggle -->
+        <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" id="auto-refresh-ma" checked>
+            <label class="form-check-label" for="auto-refresh-ma">Auto-refresh chart when changing MAs</label>
+        </div>
+    </div>
+
+    <!-- Your existing Fibonacci Settings -->
     <div class="fib-settings" id="fibSettings">
         <div class="form-check form-switch mb-2">
             <input class="form-check-input" type="checkbox" id="manualFibMode">
@@ -427,17 +525,6 @@
             <label class="form-check-label fib-label" for="showExtensions">Show Extensions</label>
         </div>
         <small class="text-muted">Click on the chart to set or enter values manually</small>
-    </div>
-
-    <!-- Trend Line Settings -->
-    <div id="trendLineSettings" class="fib-settings" style="display:none;">
-        <label for="trendLineMode" class="fib-label">Trend Lines Mode:</label>
-        <select id="trendLineMode" class="form-select" style="max-width:180px; display:inline-block;">
-            <option value="off" selected>Off</option>
-            <option value="point">Point-to-Point</option>
-            <option value="horizontal">Horizontal</option>
-        </select>
-        <small class="text-muted ms-2">Click on the chart to draw lines</small>
     </div>
 
     <!-- Chart Panel -->

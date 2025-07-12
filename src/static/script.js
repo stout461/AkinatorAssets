@@ -208,6 +208,10 @@ function fetchStockData() {
     const showExtensions = $('#showExtensions').is(':checked');
     const fibHigh = $('#fibHighValue').val();
 
+    // Get selected moving averages
+    const selectedMAs = getSelectedMovingAverages();
+    const movingAveragesParam = selectedMAs.length > 0 ? selectedMAs.join(',') : '';
+
     // Start both requests simultaneously
     const chartRequest = $.ajax({
         url: '/plot',
@@ -218,7 +222,8 @@ function fetchStockData() {
             chartMode: chartMode,
             manualFib: manualFib,
             showExtensions: showExtensions,
-            fibHigh: fibHigh
+            fibHigh: fibHigh,
+            movingAverages: movingAveragesParam  // Add this line
         }
     });
 
@@ -868,3 +873,125 @@ function handleMOATRefresh() {
         showMOATError('Failed to connect to MOAT analysis service');
     });
 }
+
+// Moving Averages UI JavaScript
+$(document).ready(function() {
+    let customMAs = [];
+
+    // Preset button handlers
+    $('#ma-preset-none').click(function() {
+        $('.ma-checkbox').prop('checked', false);
+        if ($('#auto-refresh-ma').is(':checked')) {
+            fetchStockData();
+        }
+    });
+
+    $('#ma-preset-basic').click(function() {
+        $('.ma-checkbox').prop('checked', false);
+        $('#ma-20, #ma-50').prop('checked', true);
+        if ($('#auto-refresh-ma').is(':checked')) {
+            fetchStockData();
+        }
+    });
+
+    $('#ma-preset-extended').click(function() {
+        $('.ma-checkbox').prop('checked', false);
+        $('#ma-20, #ma-50, #ma-200').prop('checked', true);
+        if ($('#auto-refresh-ma').is(':checked')) {
+            fetchStockData();
+        }
+    });
+
+    $('#ma-preset-day-trading').click(function() {
+        $('.ma-checkbox').prop('checked', false);
+        $('#ma-5, #ma-10, #ma-20').prop('checked', true);
+        if ($('#auto-refresh-ma').is(':checked')) {
+            fetchStockData();
+        }
+    });
+
+    // Individual checkbox handlers
+    $('.ma-checkbox').change(function() {
+        if ($('#auto-refresh-ma').is(':checked')) {
+            fetchStockData();
+        }
+    });
+
+    // Custom MA functionality
+    $('#add-custom-ma').click(function() {
+        const period = parseInt($('#custom-ma-input').val());
+        if (period && period > 0 && period <= 500) {
+            if (!customMAs.includes(period)) {
+                customMAs.push(period);
+                updateCustomMADisplay();
+                $('#custom-ma-input').val('');
+                if ($('#auto-refresh-ma').is(':checked')) {
+                    fetchStockData();
+                }
+            } else {
+                alert('This moving average period is already added.');
+            }
+        } else {
+            alert('Please enter a valid period between 1 and 500.');
+        }
+    });
+
+    // Allow Enter key to add custom MA
+    $('#custom-ma-input').keypress(function(e) {
+        if (e.which === 13) {
+            $('#add-custom-ma').click();
+        }
+    });
+
+    // Function to update custom MA display
+    function updateCustomMADisplay() {
+        const customMAList = $('#custom-ma-list');
+        customMAList.empty();
+
+        if (customMAs.length === 0) {
+            $('#custom-ma-display').hide();
+            return;
+        }
+
+        $('#custom-ma-display').show();
+
+        customMAs.forEach(function(period) {
+            const tag = $(`
+                <span class="custom-ma-tag">
+                    MA${period}
+                    <span class="remove-custom-ma" data-period="${period}">×</span>
+                </span>
+            `);
+            customMAList.append(tag);
+        });
+    }
+
+    // Remove custom MA
+    $(document).on('click', '.remove-custom-ma', function() {
+        const period = parseInt($(this).data('period'));
+        customMAs = customMAs.filter(p => p !== period);
+        updateCustomMADisplay();
+        if ($('#auto-refresh-ma').is(':checked')) {
+            fetchStockData();
+        }
+    });
+
+    // Function to get selected moving averages
+    window.getSelectedMovingAverages = function() {
+        const selectedMAs = [];
+
+        // Get checked standard MAs
+        $('.ma-checkbox:checked').each(function() {
+            selectedMAs.push(parseInt($(this).val()));
+        });
+
+        // Add custom MAs
+        customMAs.forEach(function(period) {
+            selectedMAs.push(period);
+        });
+
+        // Remove duplicates and sort
+        return [...new Set(selectedMAs)].sort((a, b) => a - b);
+    };
+});
+

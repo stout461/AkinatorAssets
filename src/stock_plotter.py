@@ -1,9 +1,11 @@
 import pandas as pd
 import plotly.graph_objs as go
+import plotly.subplots as sp
 import yfinance as yf
 import time
 import random
 from datetime import datetime, timedelta
+from scipy.signal import find_peaks
 
 
 class StockPlotter:
@@ -19,7 +21,8 @@ class StockPlotter:
             'level382': {'ratio': 0.382, 'color': 'rgba(255, 255, 0, 0.7)', 'name': '38.2%'},
             'level50': {'ratio': 0.5, 'color': 'rgba(0, 128, 0, 0.7)', 'name': '50%'},
             'level618': {'ratio': 0.618, 'color': 'rgba(0, 0, 255, 0.7)', 'name': '61.8%'},
-            'level786': {'ratio': 0.786, 'color': 'rgba(128, 0, 128, 0.7)', 'name': '78.6%'}
+            'level786': {'ratio': 0.786, 'color': 'rgba(128, 0, 128, 0.7)', 'name': '78.6%'},
+            'level100': {'ratio': 1.0, 'color': 'rgba(255, 0, 0, 0.7)', 'name': '100%'}
         }
 
         self.extension_config = {
@@ -215,7 +218,226 @@ class StockPlotter:
 
         return df[column].rolling(window=period, min_periods=1).mean()
 
-    def add_moving_averages(self, fig, df, x_dates, ma_periods=None):
+    def calculate_rsi(self, prices, window=14):
+        """
+        Calculate Relative Strength Index (RSI).
+        """
+        delta = prices.diff()
+        gain = (delta.where(delta > 0, 0)).rolling(window=window).mean()
+        loss = (-delta.where(delta < 0, 0)).rolling(window=window).mean()
+        rs = gain / loss
+        return 100 - (100 / (1 + rs))
+
+    def calculate_macd(self, prices, slow=26, fast=12, signal=9):
+        """
+        Calculate Moving Average Convergence Divergence (MACD).
+        """
+        exp1 = prices.ewm(span=fast, adjust=False).mean()
+        exp2 = prices.ewm(span=slow, adjust=False).mean()
+        macd_line = exp1 - exp2
+        signal_line = macd_line.ewm(span=signal, adjust=False).mean()
+        histogram = macd_line - signal_line
+        return macd_line, signal_line, histogram
+    # TODO Improve the Elliott Wave detection logic
+    def detect_elliott_waves(self, prices, min_distance=None, prominence=0.02):
+        if min_distance is None:
+            min_distance = max(5, len(prices) // 40)  # Adaptive
+        smoothed = prices.ewm(span=3).mean()  # Light smoothing
+        normalized_prices = (smoothed - smoothed.min()) / (smoothed.max() - smoothed.min() + 1e-8)
+        peaks, _ = find_peaks(normalized_prices, distance=min_distance, prominence=prominence)
+        troughs, _ = find_peaks(-normalized_prices, distance=min_distance, prominence=prominence)
+        return peaks, troughs
+
+    def validate_impulse(self, prices, points):
+        if len(points) != 6:
+            return False
+        p = [prices.iloc[pt[0]] for pt in points]
+        is_up = p[5] > p[0]
+
+        w = [p[j+1] - p[j] for j in range(5)]
+
+        if is_up:
+            # Main waves >0, corrective <0
+            if w[0] <=0 or w[2] <=0 or w[4] <=0 or w[1] >=0 or w[3] >=0:
+                return False
+            w_len = [abs(w[i]) for i in range(5)]
+            overlap = p[4] < p[1]
+        else:
+            # Main <0, corrective >0
+            if w[0] >=0 or w[2] >=0 or w[4] >=0 or w[1] <=0 or w[3] <=0:
+                return False
+            w_len = [abs(w[i]) for i in range(5)]
+            overlap = p[4] > p[1]
+
+        w1_len, w2_len, w3_len, w4_len, w5_len = w_len
+
+        # Wave 3 not shortest (relaxed to >80%)
+        if w3_len < 0.8 * max(w1_len, w5_len):
+            return False
+
+        # Wave 2 retrace <100%, >30%
+        retr2 = w2_len / w1_len
+        if retr2 >= 1 or retr2 < 0.3:
+            return False
+
+        # Wave 4 retrace <50%, >20%
+        retr4 = w4_len / w3_len
+        if retr4 >= 0.5 or retr4 < 0.2:
+            return False
+
+        # No overlap
+        if overlap:
+            return False
+
+        return True
+
+    def validate_correction(self, prices, points):
+        if len(points) != 4:
+            return False
+        p = [prices.iloc[pt[0]] for pt in points]
+        is_down = p[3] < p[0]
+
+        w = [p[j+1] - p[j] for j in range(3)]
+
+        if is_down:
+            # A <0, C <0, B >0
+            if w[0] >=0 or w[2] >=0 or w[1] <=0:
+                return False
+            w_len = [abs(w[i]) for i in range(3)]
+        else:
+            # A >0, C >0, B <0
+            if w[0] <=0 or w[2] <=0 or w[1] >=0:
+                return False
+            w_len = [abs(w[i]) for i in range(3)]
+
+        wa_len, wb_len, wc_len = w_len
+
+        # Wave C ~ A (0.618-1.618)
+        ratio_c = wc_len / wa_len
+        if ratio_c < 0.618 or ratio_c > 1.618:
+            return False
+
+        # Wave B retrace 38-78%
+        retr_b = wb_len / wa_len
+        if retr_b < 0.38 or retr_b > 0.78:
+            return False
+
+        return True
+
+    def identify_wave_patterns(self, prices, peaks, troughs):
+        patterns = {'impulse': [], 'correction': []}
+        combined = sorted([(i, 'peak') for i in peaks] + [(i, 'trough') for i in troughs])
+
+        i = 0
+        while i < len(combined) - 3:
+            # Look for 6-point impulse
+            if len(combined) - i >= 6:
+                impulse = combined[i:i+6]
+                if all(p[1] != q[1] for p, q in zip(impulse, impulse[1:])):
+                    if self.validate_impulse(prices, impulse):
+                        patterns['impulse'].append({
+                            'start': impulse[0][0],
+                            'end': impulse[5][0],
+                            'points': impulse
+                        })
+                        i += 5
+                        # Look for 4-point correction
+                        if len(combined) - i >= 4:
+                            correction = combined[i:i+4]
+                            if all(p[1] != q[1] for p, q in zip(correction, correction[1:])):
+                                if self.validate_correction(prices, correction):
+                                    patterns['correction'].append({
+                                        'start': correction[0][0],
+                                        'end': correction[3][0],
+                                        'points': correction
+                                    })
+                                    i += 4
+                                    continue
+            # Look for standalone 4-point correction
+            if len(combined) - i >= 4:
+                correction = combined[i:i+4]
+                if all(p[1] != q[1] for p, q in zip(correction, correction[1:])):
+                    if self.validate_correction(prices, correction):
+                        patterns['correction'].append({
+                            'start': correction[0][0],
+                            'end': correction[3][0],
+                            'points': correction
+                        })
+                        i += 4
+                        continue
+            i += 1
+
+        return patterns
+
+    def add_elliott_waves(self, fig, df, prices, x_dates, row=1, col=1):
+        peaks, troughs = self.detect_elliott_waves(prices)
+        patterns = self.identify_wave_patterns(prices, peaks, troughs)
+
+        # Plot only the last impulse if any
+        if patterns['impulse']:
+            pattern = patterns['impulse'][-1]
+            points = pattern['points']
+            x_pattern = [df.index[p[0]].strftime('%Y-%m-%d') for p in points]
+            y_pattern = [prices.iloc[p[0]] for p in points]
+            labels = ['0', '1', '2', '3', '4', '5'] if len(points) == 6 else []
+
+            fig.add_trace(go.Scatter(
+                x=x_pattern,
+                y=y_pattern,
+                mode='lines',
+                name='Impulse',
+                line=dict(color='blue', width=1.5),
+                hovertemplate='Price: %{y:.2f}<extra></extra>'
+            ), row=row, col=1)
+
+            # Add boxed labels
+            for j, label in enumerate(labels):
+                fig.add_annotation(
+                    x=x_pattern[j],
+                    y=y_pattern[j],
+                    text=label,
+                    showarrow=False,
+                    font=dict(color='blue', size=10),
+                    bgcolor='white',
+                    bordercolor='blue',
+                    borderwidth=1,
+                    borderpad=2,
+                    opacity=0.8
+                )
+
+        # Plot only the last correction if any
+        if patterns['correction']:
+            pattern = patterns['correction'][-1]
+            points = pattern['points']
+            x_pattern = [df.index[p[0]].strftime('%Y-%m-%d') for p in points]
+            y_pattern = [prices.iloc[p[0]] for p in points]
+            labels = ['0', 'A', 'B', 'C'] if len(points) == 4 else []
+
+            fig.add_trace(go.Scatter(
+                x=x_pattern,
+                y=y_pattern,
+                mode='lines',
+                name='Correction',
+                line=dict(color='red', dash='dash', width=1.5),
+                hovertemplate='Price: %{y:.2f}<extra></extra>'
+            ), row=row, col=1)
+
+            # Add boxed labels
+            for j, label in enumerate(labels):
+                fig.add_annotation(
+                    x=x_pattern[j],
+                    y=y_pattern[j],
+                    text=label,
+                    showarrow=False,
+                    font=dict(color='red', size=10),
+                    bgcolor='white',
+                    bordercolor='red',
+                    borderwidth=1,
+                    borderpad=2,
+                    opacity=0.8
+                )
+
+    def add_moving_averages(self, fig, df, x_dates, ma_periods=None, row=1, col=1):
         """
         Add moving average lines to the plot.
 
@@ -264,21 +486,19 @@ class StockPlotter:
                     hovertemplate=f'<b>MA{period}</b><br>' +
                                   'Date: %{x}<br>' +
                                   'Price: $%{y:.2f}<extra></extra>'
-                ))
+                ), row=row, col=col)
 
             except Exception as e:
                 print(f"Error calculating MA{period}: {str(e)}")
                 continue
 
-    def add_fibonacci_lines(self, fig, x_dates, fib_high_val, show_extensions=False):
-        """Add Fibonacci retracement lines to the plot."""
+    def add_fibonacci_lines(self, fig, x_dates, fib_high_val, fib_low_val, show_extensions=False, row=1, col=1):
+        """Add Fibonacci retracement and extension lines to the plot."""
+        price_range = fib_high_val - fib_low_val
+
         # Standard retracement levels
         for level_key, config in self.fib_levels_config.items():
-            if level_key == 'level0':
-                value = fib_high_val
-            else:
-                value = fib_high_val * (1 - config['ratio'])
-
+            value = fib_high_val - config['ratio'] * price_range
             fig.add_trace(go.Scatter(
                 x=x_dates,
                 y=[value] * len(x_dates),
@@ -290,12 +510,12 @@ class StockPlotter:
                 ),
                 name=f"{config['name']} - ${value:.2f}",
                 hoverinfo='name+y'
-            ))
+            ), row=row, col=col)
 
         # Optional extension lines
         if show_extensions:
             for i, ratio in enumerate(self.extension_config['ratios']):
-                extension_value = fib_high_val * ratio
+                extension_value = fib_high_val + (ratio - 1) * price_range
                 ratio_percent = ratio * 100
 
                 fig.add_trace(go.Scatter(
@@ -309,10 +529,11 @@ class StockPlotter:
                     ),
                     name=f"{ratio_percent:.1f}% - ${extension_value:.2f}",
                     hoverinfo='name+y'
-                ))
+                ), row=row, col=col)
 
     def create_stock_plot(self, ticker, period, chart_mode='fib', manual_fib=False,
-                          show_extensions=False, fib_high=None, moving_averages=None):
+                          show_extensions=False, fib_high=None, moving_averages=None,
+                          show_fib=False, include_financials=True):
         """
         Create a complete stock plot with price data and optional indicators.
 
@@ -324,6 +545,8 @@ class StockPlotter:
             show_extensions: Whether to show extension lines
             fib_high: High value for Fibonacci calculations
             moving_averages: List of moving average periods (e.g., [20, 50, 200])
+            show_fib: Whether to show Fibonacci lines (default: False)
+            include_financials: Whether to include financial metrics (default: True)
 
         Returns:
             dict: Contains figure, price stats, financial metrics, and price target
@@ -339,8 +562,14 @@ class StockPlotter:
         if df.empty:
             raise ValueError(f"No data found for ticker: {ticker}")
 
-        # Create figure
-        fig = go.Figure()
+        # Create subplots
+        fig = sp.make_subplots(
+            rows=3, cols=1,
+            shared_xaxes=True,
+            vertical_spacing=0.05,
+            row_heights=[0.6, 0.2, 0.2],
+            subplot_titles=['Stock Price with Indicators', 'Relative Strength Index (RSI)', 'MACD']
+        )
 
         # Convert index to datetime if needed
         if not isinstance(df.index, pd.DatetimeIndex):
@@ -356,19 +585,59 @@ class StockPlotter:
             mode='lines',
             name='Close Price',
             line=dict(color='#0ac775', width=2)
-        ))
+        ), row=1, col=1)
 
         # Add moving averages if specified
         if moving_averages and len(moving_averages) > 0:
-            self.add_moving_averages(fig, df, x_dates, moving_averages)
+            self.add_moving_averages(fig, df, x_dates, moving_averages, row=1, col=1)
 
-        # Add Fibonacci lines if requested
-        if chart_mode == 'fib' and manual_fib and fib_high:
-            try:
+        # Add Fibonacci lines if requested and toggled on
+        if chart_mode == 'fib' and show_fib:
+            fib_low_val = df['Close'].min()
+            if manual_fib and fib_high:
                 fib_high_val = float(fib_high)
-                self.add_fibonacci_lines(fig, x_dates, fib_high_val, show_extensions)
-            except ValueError:
-                print("Error: Could not parse the manual fib high value.")
+            else:
+                fib_high_val = df['Close'].max()
+            self.add_fibonacci_lines(fig, x_dates, fib_high_val, fib_low_val, show_extensions, row=1, col=1)
+
+        # Add Elliott Waves
+        self.add_elliott_waves(fig, df, df['Close'], x_dates, row=1, col=1)
+
+        # Add RSI subplot
+        rsi = self.calculate_rsi(df['Close'])
+        fig.add_trace(go.Scatter(
+            x=x_dates,
+            y=rsi.tolist(),
+            mode='lines',
+            name='RSI',
+            line=dict(color='purple')
+        ), row=2, col=1)
+        fig.add_hline(y=70, line_dash="dash", line_color="red", row=2, col=1)
+        fig.add_hline(y=30, line_dash="dash", line_color="green", row=2, col=1)
+
+        # Add MACD subplot
+        macd_line, signal_line, histogram = self.calculate_macd(df['Close'])
+        fig.add_trace(go.Scatter(
+            x=x_dates,
+            y=macd_line.tolist(),
+            mode='lines',
+            name='MACD',
+            line=dict(color='blue')
+        ), row=3, col=1)
+        fig.add_trace(go.Scatter(
+            x=x_dates,
+            y=signal_line.tolist(),
+            mode='lines',
+            name='Signal Line',
+            line=dict(color='red')
+        ), row=3, col=1)
+        colors = ['green' if val >= 0 else 'red' for val in histogram]
+        fig.add_trace(go.Bar(
+            x=x_dates,
+            y=histogram.tolist(),
+            name='Histogram',
+            marker_color=colors
+        ), row=3, col=1)
 
         # Update layout
         period_name = {
@@ -381,10 +650,7 @@ class StockPlotter:
 
         fig.update_layout(
             title=f"{ticker} Stock Price - {period_name}",
-            xaxis_title="Date",
-            yaxis_title="Price (USD)",
-            template="plotly_white",
-            height=600,
+            height=800,
             showlegend=True,
             legend=dict(
                 orientation="h",
@@ -392,11 +658,19 @@ class StockPlotter:
                 y=1.02,
                 xanchor="right",
                 x=1
-            )
+            ),
+            xaxis3_title="Date",
+            yaxis_title="Price (USD)",
+            yaxis2_title="RSI",
+            yaxis3_title="MACD",
+            template="plotly_white"
         )
 
         # Get financial data
-        financial_data = self.get_yfinance_data(ticker)
+        if include_financials:
+            financial_data = self.get_yfinance_data(ticker)
+        else:
+            financial_data = {}
 
         # Calculate statistics
         price_stats = self.calculate_price_stats(df)

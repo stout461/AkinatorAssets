@@ -354,13 +354,14 @@ def plot():
         ticker = request.form['ticker'].strip().upper()
         period = request.form.get('period', '1Y')
         chart_mode = request.form.get('chartMode', 'fib')
-        manual_fib = False
+        manual_fib = request.form.get('manualFib', 'false') == 'true'
 
         if chart_mode == 'fib':
             manual_fib = request.form.get('manualFib', 'false') == 'true'
 
         show_extensions = request.form.get('showExtensions', 'false') == 'true'
         fib_high = request.form.get('fibHigh')
+        show_fib = request.form.get('showFib', 'false') == 'true'  # New parameter
 
         # Handle moving averages
         moving_averages = []
@@ -382,7 +383,8 @@ def plot():
             manual_fib=manual_fib,
             show_extensions=show_extensions,
             fib_high=fib_high,
-            moving_averages=moving_averages
+            moving_averages=moving_averages,
+            show_fib=show_fib  # Pass the new parameter
         )
 
         # Convert figure to JSON

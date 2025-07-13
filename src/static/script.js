@@ -48,6 +48,7 @@ function getCommonFetchParams() {
     const fibHigh = $('#fibHighValue').val();
     const selectedMAs = getSelectedMovingAverages();
     const movingAveragesParam = selectedMAs.length > 0 ? selectedMAs.join(',') : '';
+    const showFib = $('#showFib').is(':checked');
 
     return {
         ticker,
@@ -56,7 +57,8 @@ function getCommonFetchParams() {
         manualFib,
         showExtensions,
         fibHigh,
-        movingAverages: movingAveragesParam
+        movingAverages: movingAveragesParam,
+        showFib
     };
 }
 
@@ -679,6 +681,12 @@ $(document).ready(function() {
     });
 
     $('#showExtensions').on('change', function() {
+        if (getChartClickMode() === 'fib') {
+            fetchChartAndFinancials();
+        }
+    });
+
+    $('#showFib').on('change', function() {
         if (getChartClickMode() === 'fib') {
             fetchChartAndFinancials();
         }

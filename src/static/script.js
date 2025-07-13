@@ -62,7 +62,7 @@ function getCommonFetchParams() {
     };
 }
 
-function fetchChartAndFinancials() {
+function fetchChartAndFinancials(onlyChart = false) {
     const params = getCommonFetchParams();
 
     if (!params.ticker) {
@@ -73,8 +73,12 @@ function fetchChartAndFinancials() {
     // Show chart loading
     $('#loading').show();
     $('#error').hide();
-    $('#stats-container').hide();
-    $('#price-target-container').hide();
+    if (!onlyChart) {
+        $('#stats-container').hide();
+        $('#price-target-container').hide();
+    }
+
+    params.includeFinancials = onlyChart ? 'false' : 'true';  // New param to control backend fetch
 
     return $.ajax({
         url: '/plot',
@@ -99,11 +103,14 @@ function fetchChartAndFinancials() {
             }
         });
 
-        // Update financial stats and projections
-        updateFinancialStats(response);
-        $('#stats-container').show();
-        $('#price-target-container').show();
-        initUserProjections(response);
+        // Update sections only if not onlyChart
+        if (!onlyChart) {
+            updatePriceStats(response);
+            updateFinancialMetrics(response);
+            initUserProjections(response);
+            $('#stats-container').show();
+            $('#price-target-container').show();
+        }
     }).fail(function(error) {
         $('#loading').hide();
         $('#error').text('Chart request failed. Please try again.').show();
@@ -214,12 +221,15 @@ function loadAllData() {
 // DISPLAY AND UPDATE FUNCTIONS
 // ========================================
 
-function updateFinancialStats(response) {
+// Split updateFinancialStats into two functions
+function updatePriceStats(response) {
     $('#current-price').text(response.price.current);
     $('#period-change').text(response.price.change);
     $('#year-high').text(response.price.high);
     $('#year-low').text(response.price.low);
+}
 
+function updateFinancialMetrics(response) {
     $('#revenue-growth').text(response.financials.revenueGrowth);
     $('#forward-pe').text(response.financials.forwardPE);
     $('#trailing-pe').text(response.financials.trailingPE);
@@ -676,25 +686,25 @@ $(document).ready(function() {
             $('#fibHighValue').val('');
         }
         if (getChartClickMode() === 'fib') {
-            fetchChartAndFinancials();
+            fetchChartAndFinancials(true);
         }
     });
 
     $('#showExtensions').on('change', function() {
         if (getChartClickMode() === 'fib') {
-            fetchChartAndFinancials();
+            fetchChartAndFinancials(true);
         }
     });
 
     $('#showFib').on('change', function() {
         if (getChartClickMode() === 'fib') {
-            fetchChartAndFinancials();
+            fetchChartAndFinancials(true);
         }
     });
 
     $('#fibHighValue').on('change', function() {
         if ($(this).val() && getChartClickMode() === 'fib') {
-            fetchChartAndFinancials();
+            fetchChartAndFinancials(true);
         }
     });
 
@@ -723,7 +733,7 @@ $(document).ready(function() {
     $('#ma-preset-none').click(function() {
         $('.ma-checkbox').prop('checked', false);
         if ($('#auto-refresh-ma').is(':checked')) {
-            fetchChartAndFinancials();
+            fetchChartAndFinancials(true);
         }
     });
 
@@ -731,7 +741,7 @@ $(document).ready(function() {
         $('.ma-checkbox').prop('checked', false);
         $('#ma-20, #ma-50').prop('checked', true);
         if ($('#auto-refresh-ma').is(':checked')) {
-            fetchChartAndFinancials();
+            fetchChartAndFinancials(true);
         }
     });
 
@@ -739,7 +749,7 @@ $(document).ready(function() {
         $('.ma-checkbox').prop('checked', false);
         $('#ma-20, #ma-50, #ma-200').prop('checked', true);
         if ($('#auto-refresh-ma').is(':checked')) {
-            fetchChartAndFinancials();
+            fetchChartAndFinancials(true);
         }
     });
 
@@ -747,13 +757,13 @@ $(document).ready(function() {
         $('.ma-checkbox').prop('checked', false);
         $('#ma-5, #ma-10, #ma-20').prop('checked', true);
         if ($('#auto-refresh-ma').is(':checked')) {
-            fetchChartAndFinancials();
+            fetchChartAndFinancials(true);
         }
     });
 
     $('.ma-checkbox').change(function() {
         if ($('#auto-refresh-ma').is(':checked')) {
-            fetchChartAndFinancials();
+            fetchChartAndFinancials(true);
         }
     });
 
@@ -765,7 +775,7 @@ $(document).ready(function() {
                 updateCustomMADisplay();
                 $('#custom-ma-input').val('');
                 if ($('#auto-refresh-ma').is(':checked')) {
-                    fetchChartAndFinancials();
+                    fetchChartAndFinancials(true);
                 }
             } else {
                 alert('This moving average period is already added.');
@@ -813,7 +823,7 @@ $(document).ready(function() {
         customMAs = customMAs.filter(p => p !== period);
         updateCustomMADisplay();
         if ($('#auto-refresh-ma').is(':checked')) {
-            fetchChartAndFinancials();
+            fetchChartAndFinancials(true);
         }
     });
 

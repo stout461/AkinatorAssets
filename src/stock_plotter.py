@@ -380,7 +380,8 @@ class StockPlotter:
                 ), row=row, col=col)
 
     def create_stock_plot(self, ticker, period, chart_mode='fib', manual_fib=False,
-                          show_extensions=False, fib_high=None, moving_averages=None, show_fib=False):
+                          show_extensions=False, fib_high=None, moving_averages=None,
+                          show_fib=False, include_financials=True):
         """
         Create a complete stock plot with price data and optional indicators.
 
@@ -393,6 +394,7 @@ class StockPlotter:
             fib_high: High value for Fibonacci calculations
             moving_averages: List of moving average periods (e.g., [20, 50, 200])
             show_fib: Whether to show Fibonacci lines (default: False)
+            include_financials: Whether to include financial metrics (default: True)
 
         Returns:
             dict: Contains figure, price stats, financial metrics, and price target
@@ -513,7 +515,10 @@ class StockPlotter:
         )
 
         # Get financial data
-        financial_data = self.get_yfinance_data(ticker)
+        if include_financials:
+            financial_data = self.get_yfinance_data(ticker)
+        else:
+            financial_data = {}
 
         # Calculate statistics
         price_stats = self.calculate_price_stats(df)

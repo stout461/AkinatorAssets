@@ -361,7 +361,9 @@ def plot():
 
         show_extensions = request.form.get('showExtensions', 'false') == 'true'
         fib_high = request.form.get('fibHigh')
-        show_fib = request.form.get('showFib', 'false') == 'true'  # New parameter
+        show_fib = request.form.get('showFib', 'false') == 'true'
+
+        include_financials = request.form.get('includeFinancials', 'true') == 'true'  # New param
 
         # Handle moving averages
         moving_averages = []
@@ -384,7 +386,8 @@ def plot():
             show_extensions=show_extensions,
             fib_high=fib_high,
             moving_averages=moving_averages,
-            show_fib=show_fib  # Pass the new parameter
+            show_fib=show_fib,
+            include_financials=include_financials  # Pass new param
         )
 
         # Convert figure to JSON

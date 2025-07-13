@@ -57,7 +57,7 @@
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h5 class="mb-0">📈 Stock Analysis</h5>
                 <div class="d-flex align-items-center gap-2">
-                    <small id="analysis-timestamp" class="text-muted"></small>
+                    <small id="analysis-timestamp" class="text-muted">Last updated: Loading...</small>
                     <button id="refresh-analysis-btn" class="btn btn-outline-secondary btn-sm" style="display:none;" title="Force refresh analysis">
                         <i class="fa fa-refresh"></i> Refresh
                     </button>
@@ -224,7 +224,7 @@
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h5 class="mb-0">🏰 Competitive MOAT Analysis</h5>
                         <div class="d-flex align-items-center gap-2">
-                            <small id="moat-timestamp" class="text-muted"></small>
+                            <small id="moat-timestamp" class="text-muted">Last updated: Loading...</small>
                             <button id="refresh-moat-btn" class="btn btn-outline-secondary btn-sm" style="display:none;" title="Force refresh MOAT analysis">
                                 <i class="fa fa-refresh"></i> Refresh
                             </button>
@@ -403,45 +403,123 @@
     </div>
 
     <!-- Chart Click Mode (Fib vs. Trendlines) -->
-    <div class="card-panel">
-        <label class="fib-label">Chart Click Mode:</label>
-        <div class="form-check form-check-inline">
-            <input class="form-check-input" type="radio" name="chartClickMode" id="modeFib" value="fib" checked>
-            <label class="form-check-label" for="modeFib">Fibonacci</label>
-        </div>
-        <div class="form-check form-check-inline">
-            <input class="form-check-input" type="radio" name="chartClickMode" id="modeTrendlines" value="trendlines">
-            <label class="form-check-label" for="modeTrendlines">Trendlines</label>
-        </div>
-    </div>
 
-    <!-- Fibonacci Settings -->
-    <div class="fib-settings" id="fibSettings">
-        <div class="form-check form-switch mb-2">
-            <input class="form-check-input" type="checkbox" id="manualFibMode">
-            <label class="form-check-label fib-label" for="manualFibMode">Manual Fibonacci High</label>
-            <input type="number" class="form-control" id="fibHighValue" step="0.01" style="max-width:120px; display:inline-block;" placeholder="High" />
-        </div>
-        <div class="form-check form-switch mb-2">
-            <input class="form-check-input" type="checkbox" id="showExtensions">
-            <label class="form-check-label fib-label" for="showExtensions">Show Extensions</label>
-        </div>
-        <small class="text-muted">Click on the chart to set or enter values manually</small>
-    </div>
 
-    <!-- Trend Line Settings -->
-    <div id="trendLineSettings" class="fib-settings" style="display:none;">
-        <label for="trendLineMode" class="fib-label">Trend Lines Mode:</label>
-        <select id="trendLineMode" class="form-select" style="max-width:180px; display:inline-block;">
-            <option value="off" selected>Off</option>
-            <option value="point">Point-to-Point</option>
-            <option value="horizontal">Horizontal</option>
-        </select>
-        <small class="text-muted ms-2">Click on the chart to draw lines</small>
-    </div>
+
+
+
 
     <!-- Chart Panel -->
-    <div class="card-panel" id="graph-panel">
+    <div class="card-panel">
+        <h5>📈 Stock Chart
+            <button id="chart-settings-toggle" class="btn btn-sm btn-outline-secondary float-right">Settings</button>
+        </h5>
+
+        <div id="chart-settings" style="display: none; margin-bottom: 15px;">
+            <div class="row">
+                <!-- Section 1: Chart Click Mode -->
+                <div class="col-md-4 settings-section pr-3 border-right">
+                    <h6>Chart Click Mode</h6>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="chartClickMode" id="fibMode" value="fib" checked>
+                        <label class="form-check-label" for="fibMode">Fibonacci</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="chartClickMode" id="trendlinesMode" value="trendlines">
+                        <label class="form-check-label" for="trendlinesMode">Trendlines</label>
+                    </div>
+                </div>
+
+                <!-- Section 2: Mode-Specific Settings -->
+                <div class="col-md-4 settings-section px-3 border-right">
+                    <div id="fibSettings" style="display: block;">
+                        <h6>Fibonacci Settings</h6>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="manualFibMode">
+                            <label class="form-check-label" for="manualFibMode">Manual Fibonacci High</label>
+                        </div>
+                        <input type="number" class="form-control form-control-sm mt-1" id="fibHighValue" placeholder="Enter high value">
+                        <div class="form-check mt-2">
+                            <input class="form-check-input" type="checkbox" id="showExtensions">
+                            <label class="form-check-label" for="showExtensions">Show Extensions</label>
+                        </div>
+                        <small class="text-muted">Click on the chart to set or enter values manually</small>
+                    </div>
+
+                    <div id="trendLineSettings" style="display: none;">
+                        <h6>Trendline Settings</h6>
+                        <select class="form-control form-control-sm" id="trendLineMode">
+                            <option value="off">Off</option>
+                            <option value="horizontal">Horizontal</option>
+                            <option value="point">Point-to-Point</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Section 3: Moving Averages -->
+                <div class="col-md-4 settings-section pl-3">
+                    <h6>📊 Moving Averages</h6>
+                    <div class="mb-2">
+                        <strong>Quick Presets:</strong>
+                        <button id="ma-preset-none" class="btn btn-sm btn-outline-secondary ml-1">None</button>
+                        <button id="ma-preset-basic" class="btn btn-sm btn-outline-secondary ml-1">Basic (20, 50)</button>
+                        <button id="ma-preset-extended" class="btn btn-sm btn-outline-secondary ml-1">Extended (20, 50, 200)</button>
+                        <button id="ma-preset-day-trading" class="btn btn-sm btn-outline-secondary ml-1">Day Trading (5, 10, 20)</button>
+                    </div>
+
+                    <div class="mb-2">
+                        <strong>Individual Moving Averages:</strong>
+                        <div class="d-flex flex-wrap mt-1">
+                            <div class="form-check mr-3">
+                                <input class="form-check-input ma-checkbox" type="checkbox" value="5" id="ma-5">
+                                <label class="form-check-label text-primary" for="ma-5">MA5</label>
+                            </div>
+                            <div class="form-check mr-3">
+                                <input class="form-check-input ma-checkbox" type="checkbox" value="10" id="ma-10">
+                                <label class="form-check-label text-danger" for="ma-10">MA10</label>
+                            </div>
+                            <div class="form-check mr-3">
+                                <input class="form-check-input ma-checkbox" type="checkbox" value="20" id="ma-20">
+                                <label class="form-check-label text-success" for="ma-20">MA20</label>
+                            </div>
+                            <div class="form-check mr-3">
+                                <input class="form-check-input ma-checkbox" type="checkbox" value="50" id="ma-50">
+                                <label class="form-check-label text-warning" for="ma-50">MA50</label>
+                            </div>
+                            <div class="form-check mr-3">
+                                <input class="form-check-input ma-checkbox" type="checkbox" value="100" id="ma-100">
+                                <label class="form-check-label text-info" for="ma-100">MA100</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input ma-checkbox" type="checkbox" value="200" id="ma-200">
+                                <label class="form-check-label text-purple" for="ma-200">MA200</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-2">
+                        <strong>Custom Moving Average:</strong>
+                        <div class="input-group input-group-sm mt-1">
+                            <input type="number" class="form-control" id="custom-ma-input" placeholder="Enter period (1-500)" min="1" max="500">
+                            <div class="input-group-append">
+                                <button class="btn btn-outline-secondary" type="button" id="add-custom-ma">Add</button>
+                            </div>
+                        </div>
+                        <div id="custom-ma-display" style="display: none; margin-top: 5px;">
+                            <span>Custom MAs:</span>
+                            <div id="custom-ma-list" class="d-inline"></div>
+                        </div>
+                    </div>
+
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="auto-refresh-ma" checked>
+                        <label class="form-check-label" for="auto-refresh-ma">Auto-refresh chart when changing MAs</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="loading1" style="display: none;">Fetching stock data...</div>
         <div id="graph"></div>
     </div>
 </div>

@@ -1,242 +1,84 @@
 console.log("✅ script.js loaded");
+
 let chartDataX = [];
 let pointForLine = null;
 let trendLineCount = 0;
+let customMAs = [];
 
-// Ticker/period listeners
-$('#submit').on('click', fetchStockData);
-$('#ticker').on('keypress', function(e) {
-    if (e.which === 13) fetchStockData();
-});
-$('input[name="period"]').on('change', fetchStockData);
+// ========================================
+// UTILITY FUNCTIONS
+// ========================================
 
-// Switching chart click mode toggles which settings panel is shown
-$('input[name="chartClickMode"]').on('change', function() {
-    const mode = getChartClickMode();
-    if (mode === 'fib') {
-        $('#fibSettings').show();
-        $('#trendLineSettings').hide();
-    } else {
-        $('#fibSettings').hide();
-        $('#trendLineSettings').show();
-    }
-});
-
-// On page load, set up which panel is shown by default
-$(document).ready(function() {
-    // Existing logic for loading watchlist table
-
-    if (cachedData && cachedCols) {
-        $('#watchlist-head').empty();
-        $('#watchlist-body').empty();
-
-        cachedCols.forEach(col => {
-            $('#watchlist-head').append(`<th>${col}</th>`);
-        });
-
-        cachedData.forEach(row => {
-            const rowHtml = cachedCols.map(col => {
-                const cellValue = row[col] !== null ? row[col] : '';
-
-                // 🎨 Special logic for the "5Y Multibagger Rate" column
-                if (col === "5Y Multibagger Rate") {
-                    const rate = parseFloat(cellValue);
-                    let backgroundColor = "#ffffff"; // fallback white
-
-                    if (!isNaN(rate)) {
-                        const midpoint = 1.5;
-                        let intensity;
-
-                        if (rate < midpoint) {
-                            // Red gradient: closer to 0 = darker red, closer to 1.5 = lighter red
-                            intensity = Math.round(255 * (rate / midpoint)); // 0 → 255
-                            backgroundColor = `rgb(255, ${intensity}, ${intensity})`;
-                        } else {
-                            // Green gradient: closer to 1.5 = lighter green, higher = darker green
-                            const greenRange = Math.min(rate - midpoint, 3.5); // cap effect above 5
-                            intensity = Math.round(255 * (1 - greenRange / 2)); // closer to 1.5 = 255, higher = 0
-                            backgroundColor = `rgb(${intensity}, 255, ${intensity})`;
-                        }
-                    }
-
-                    return `<td class="gradient-cell" style="background-color: ${backgroundColor}">${cellValue}</td>`;
-                }
-
-                return `<td>${cellValue}</td>`;
-            }).join('');
-
-            $('#watchlist-body').append(`<tr>${rowHtml}</tr>`);
-        });
-
-        $('#watchlist-table-container').show();
-
-        if ($.fn.DataTable.isDataTable('#watchlist-table')) {
-            $('#watchlist-table').DataTable().destroy();
-        }
-        $('#watchlist-table').DataTable({
-            pageLength: 25,  // default to 25
-            lengthMenu: [10, 25, 50, 100]
-        });
-    }
-
-    // ✅ Auto-trigger AAPL chart on load
-    fetchStockData();
-});
-
-
-
-// Returns "fib" or "trendlines"
 function getChartClickMode() {
     return $('input[name="chartClickMode"]:checked').val();
 }
 
-// Chart Click Handler
-function chartClickHandler(data) {
-    const clickMode = getChartClickMode();
-    const clickedY = data.points[0].y;
-
-    // If user in Fibonacci mode: set fibHighValue from click, then fetch
-    if (clickMode === 'fib') {
-        if ($('#manualFibMode').is(':checked')) {
-            $('#fibHighValue').val(clickedY.toFixed(2));
-            fetchStockData();
-        }
-    }
-    // If user in Trendline mode: add lines
-    else if (clickMode === 'trendlines') {
-        const mode = $('#trendLineMode').val();
-        if (mode === 'off') return;
-
-        let clickedX = data.points[0].x;
-        if (mode === 'horizontal') {
-            // add horizontal line
-            trendLineCount++;
-            if (!chartDataX || chartDataX.length < 2) return;
-            const xStart = chartDataX[0];
-            const xEnd = chartDataX[chartDataX.length - 1];
-
-            const trace = {
-                x: [xStart, xEnd],
-                y: [clickedY, clickedY],
-                mode: 'lines',
-                line: {
-                    color: randomColor(),
-                    width: 2,
-                    dash: 'dot'
-                },
-                name: 'H-Line ' + trendLineCount,
-                hoverinfo: 'none'
-            };
-            Plotly.addTraces('graph', trace);
-
-        } else if (mode === 'point') {
-            // point-to-point line
-            if (!pointForLine) {
-                pointForLine = {
-                    x: clickedX,
-                    y: clickedY
-                };
-            } else {
-                trendLineCount++;
-                const trace = {
-                    x: [pointForLine.x, clickedX],
-                    y: [pointForLine.y, clickedY],
-                    mode: 'lines',
-                    line: {
-                        color: randomColor(),
-                        width: 2
-                    },
-                    name: 'Line ' + trendLineCount,
-                    hoverinfo: 'none'
-                };
-                Plotly.addTraces('graph', trace);
-                pointForLine = null;
-            }
-        }
-    }
-}
-
-// randomColor for drawing lines
 function randomColor() {
     const colors = ['#FF5733', '#33FFCC', '#FF33A6', '#3371FF', '#FFD633', '#4CAF50'];
     return colors[Math.floor(Math.random() * colors.length)];
 }
 
-// Fib toggles: re-fetch on changes
-$('#manualFibMode').on('change', function() {
-    // If unchecked, clear fibHigh
-    if (!$(this).is(':checked')) {
-        $('#fibHighValue').val('');
-    }
-    // Only fetch if we are in fib mode
-    if (getChartClickMode() === 'fib') {
-        fetchStockData();
-    }
-});
-$('#showExtensions').on('change', function() {
-    if (getChartClickMode() === 'fib') {
-        fetchStockData();
-    }
-});
-$('#fibHighValue').on('change', function() {
-    if ($(this).val() && getChartClickMode() === 'fib') {
-        fetchStockData();
-    }
-});
+function getSelectedMovingAverages() {
+    const selectedMAs = [];
 
-// Main fetch function
-function fetchStockData() {
-    var ticker = $('#ticker').val().trim();
-    var period = $('input[name="period"]:checked').val();
+    // Get checked standard MAs
+    $('.ma-checkbox:checked').each(function() {
+        selectedMAs.push(parseInt($(this).val()));
+    });
 
-    if (!ticker) {
-        $('#error').text('Please enter a valid ticker symbol').show();
-        return;
-    }
+    // Add custom MAs
+    customMAs.forEach(function(period) {
+        selectedMAs.push(period);
+    });
 
-    resetMOATAnalysis();
-    // Show loading states
-    $('#loading').show();
-    $('#analysis-loading').show();
-    $('#error').hide();
-    $('#stats-container').hide();
-    $('#price-target-container').hide();
-    $('#analysis-container').hide();
+    // Remove duplicates and sort
+    return [...new Set(selectedMAs)].sort((a, b) => a - b);
+}
 
+// ========================================
+// FETCH FUNCTIONS
+// ========================================
+
+function getCommonFetchParams() {
+    const ticker = $('#ticker').val().trim();
+    const period = $('input[name="period"]:checked').val();
     const chartMode = getChartClickMode();
     const manualFib = (chartMode === 'fib') && $('#manualFibMode').is(':checked');
     const showExtensions = $('#showExtensions').is(':checked');
     const fibHigh = $('#fibHighValue').val();
-
-    // Get selected moving averages
     const selectedMAs = getSelectedMovingAverages();
     const movingAveragesParam = selectedMAs.length > 0 ? selectedMAs.join(',') : '';
 
-    // Start both requests simultaneously
-    const chartRequest = $.ajax({
+    return {
+        ticker,
+        period,
+        chartMode,
+        manualFib,
+        showExtensions,
+        fibHigh,
+        movingAverages: movingAveragesParam
+    };
+}
+
+function fetchChartAndFinancials() {
+    const params = getCommonFetchParams();
+
+    if (!params.ticker) {
+        $('#error').text('Please enter a valid ticker symbol').show();
+        return Promise.reject('Invalid ticker');
+    }
+
+    // Show chart loading
+    $('#loading').show();
+    $('#error').hide();
+    $('#stats-container').hide();
+    $('#price-target-container').hide();
+
+    return $.ajax({
         url: '/plot',
         type: 'POST',
-        data: {
-            ticker: ticker,
-            period: period,
-            chartMode: chartMode,
-            manualFib: manualFib,
-            showExtensions: showExtensions,
-            fibHigh: fibHigh,
-            movingAverages: movingAveragesParam  // Add this line
-        }
-    });
-
-    const analysisRequest = $.ajax({
-        url: '/analyze_stock',
-        type: 'POST',
-        data: {
-            ticker: ticker
-        }
-    });
-
-    // Handle chart data response
-    chartRequest.done(function(response) {
+        data: params
+    }).done(function(response) {
         $('#loading').hide();
 
         if (response.error) {
@@ -255,40 +97,121 @@ function fetchStockData() {
             }
         });
 
-        // Update financial stats
+        // Update financial stats and projections
         updateFinancialStats(response);
         $('#stats-container').show();
         $('#price-target-container').show();
         initUserProjections(response);
-    });
-
-    chartRequest.fail(function(error) {
+    }).fail(function(error) {
         $('#loading').hide();
         $('#error').text('Chart request failed. Please try again.').show();
     });
+}
 
-    // Handle analysis response
-    analysisRequest.done(function(response) {
+function fetchAnalysis(forceRefresh = false) {
+    const ticker = $('#ticker').val().trim();
+
+    if (!ticker) {
+        return Promise.reject('Invalid ticker');
+    }
+
+    // Show analysis loading
+    $('#analysis-loading').show();
+    $('#analysis-container').hide();
+    $('#analysis-container .card-panel').removeClass('analysis-success');
+
+    const data = { ticker };
+    if (forceRefresh) {
+        data.force_refresh = true;
+    }
+
+    return $.ajax({
+        url: '/analyze_stock',
+        type: 'POST',
+        data: data
+    }).done(function(response) {
         $('#analysis-loading').hide();
 
         if (response.success) {
             displayAnalysisResults(response);
-            updateAnalysisTimestamp(response.data);
+            updateAnalysisTimestamp(response);
             setupAnalysisRefreshButton();
             $('#analysis-container').show();
             console.log(`✅ Analysis completed in ${response.duration}s with ${response.search_calls} searches`);
         } else {
             displayAnalysisError(response.error);
         }
-    });
-
-    analysisRequest.fail(function(error) {
+    }).fail(function(error) {
         $('#analysis-loading').hide();
         displayAnalysisError('Analysis request failed. Please check your connection and try again.');
     });
 }
 
-// New function to update financial stats
+function fetchMOATAnalysis(forceRefresh = false) {
+    const ticker = $('#ticker').val().trim();
+
+    if (!ticker) {
+        return Promise.reject('Invalid ticker');
+    }
+
+    // Show MOAT loading
+    showMOATLoading();
+
+    const body = { ticker };
+    if (forceRefresh) {
+        body.force_refresh = true;
+    }
+
+    return fetch('/api/moat-analysis', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            displayMOATAnalysis(data.data);
+        } else {
+            showMOATError(data.error || 'MOAT analysis failed');
+        }
+    })
+    .catch(error => {
+        console.error('MOAT Analysis Error:', error);
+        showMOATError('Failed to connect to MOAT analysis service');
+    });
+}
+
+function loadAllData() {
+    const params = getCommonFetchParams();
+
+    if (!params.ticker) {
+        $('#error').text('Please enter a valid ticker symbol').show();
+        return;
+    }
+
+    // Reset all sections
+    resetMOATAnalysis();
+    $('#analysis-container').hide();
+    $('#error').hide();
+
+    // Fetch all in parallel
+    Promise.all([
+        fetchChartAndFinancials(),
+        fetchAnalysis(),
+        fetchMOATAnalysis()
+    ]).then(() => {
+        console.log('✅ All data loaded');
+    }).catch(error => {
+        console.error('Error loading data:', error);
+    });
+}
+
+// ========================================
+// DISPLAY AND UPDATE FUNCTIONS
+// ========================================
+
 function updateFinancialStats(response) {
     $('#current-price').text(response.price.current);
     $('#period-change').text(response.price.change);
@@ -313,10 +236,8 @@ function updateFinancialStats(response) {
     }
 }
 
-// New function to display analysis results
 function displayAnalysisResults(response) {
     try {
-        // Validate data structure
         if (!response || !response.success || !response.data || !response.data.sections) {
             throw new Error('Malformed API response');
         }
@@ -342,7 +263,6 @@ function displayAnalysisResults(response) {
 
         $('#analysis-container .card-panel').addClass('analysis-success');
         updateAnalysisTimestamp(response.data);
-        setupAnalysisRefreshButton();
         console.log('✅ Analysis sections updated successfully');
     } catch (error) {
         console.error('Error formatting analysis results:', error);
@@ -350,8 +270,6 @@ function displayAnalysisResults(response) {
     }
 }
 
-
-// New function to display analysis errors
 function displayAnalysisError(errorMessage) {
     const errorHtml = `
         <div class="analysis-error p-3 rounded">
@@ -370,7 +288,6 @@ function displayAnalysisError(errorMessage) {
     console.error('Analysis error:', errorMessage);
 }
 
-// User projection sliders
 function calculateUserProjection() {
     const userRevenueGrowth = parseFloat($('#user-revenue-growth').val()) / 100;
     const userProfitMargin = parseFloat($('#user-profit-margin').val()) / 100;
@@ -409,7 +326,6 @@ function calculateUserProjection() {
     $('#user-rate-increase').text(rateIncrease + 'x');
 }
 
-// Called after we fetch new data
 function initUserProjections(response) {
     if (response.financials.revenueGrowth !== 'N/A') {
         const g = parseFloat(response.financials.revenueGrowth.replace('%', ''));
@@ -426,45 +342,41 @@ function initUserProjections(response) {
     calculateUserProjection();
 }
 
-// Recalculate on slider input
-$('#user-revenue-growth, #user-profit-margin, #user-pe-ratio').on('input', calculateUserProjection);
-
-// Add these functions to your script.js file
-
-// ========================================
-// MOAT ANALYSIS FUNCTIONS
-// Add these to your existing script.js file
-// ========================================
-
-// MOAT Analysis Functions
-function runMOATAnalysis(ticker) {
-    console.log(`🏰 Starting MOAT analysis for ${ticker}`);
-
-    // Show loading state
-    showMOATLoading();
-
-    // Make API call to backend
-    fetch('/api/moat-analysis', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ ticker: ticker })
-    })
-    .then(response => response.json())
-    .then(data => {
-        console.log('MOAT Analysis Response:', data);
-        if (data.success) {
-            displayMOATAnalysis(data.data);
-        } else {
-            showMOATError(data.error || 'MOAT analysis failed');
-        }
-    })
-    .catch(error => {
-        console.error('MOAT Analysis Error:', error);
-        showMOATError('Failed to connect to MOAT analysis service');
-    });
+function updateAnalysisTimestamp(data) {
+    const timestampElement = document.getElementById('analysis-timestamp');
+    if (data.timestamp) {
+        const dbTimestamp = new Date(data.timestamp);
+        const dateString = dbTimestamp.toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric'
+        });
+        const timeString = dbTimestamp.toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+        });
+        timestampElement.textContent = `Last updated: ${dateString} at ${timeString}`;
+    }
 }
+
+function setupAnalysisRefreshButton() {
+    const refreshBtn = document.getElementById('refresh-analysis-btn');
+    if (refreshBtn) {
+        refreshBtn.style.display = 'inline-block';
+        refreshBtn.removeEventListener('click', handleAnalysisRefresh);
+        refreshBtn.addEventListener('click', handleAnalysisRefresh);
+    }
+}
+
+function handleAnalysisRefresh() {
+    console.log(`🔄 Refreshing analysis for ${$('#ticker').val().trim()}...`);
+    fetchAnalysis(true);
+}
+
+// ========================================
+// MOAT FUNCTIONS
+// ========================================
 
 function showMOATLoading() {
     document.getElementById('moat-initial').style.display = 'none';
@@ -476,15 +388,11 @@ function showMOATLoading() {
 function displayMOATAnalysis(data) {
     console.log('✅ Displaying MOAT analysis:', data);
 
-    // Hide loading states
     document.getElementById('moat-loading').style.display = 'none';
     document.getElementById('moat-error').style.display = 'none';
     document.getElementById('moat-initial').style.display = 'none';
-
-    // Show content
     document.getElementById('moat-content').style.display = 'block';
 
-    // Populate sections
     populateMOATSection('moat-executive-summary', data.sections.executive_summary);
     populateMOATSection('moat-analysis-content', data.sections.moat_analysis);
     populateMOATSection('market-positioning-content', data.sections.market_positioning);
@@ -492,13 +400,11 @@ function displayMOATAnalysis(data) {
     updateMOATTimestamp();
     setupMOATRefreshButton();
 
-    // Update title
     const mainTitle = document.querySelector('.col-lg-9 .card-panel h5');
     if (mainTitle && data.ticker) {
         mainTitle.innerHTML = `🏰 Competitive MOAT Analysis - ${data.ticker}`;
     }
 
-    // Make sure first tab is active
     setTimeout(() => {
         switchMOATTab('executive');
     }, 500);
@@ -518,27 +424,19 @@ function populateMOATSection(elementId, content) {
         return;
     }
 
-    // Format content with proper HTML
     const formattedContent = formatMOATContent(content);
     element.innerHTML = formattedContent;
 }
 
 function formatMOATContent(content) {
     let formatted = content;
-
-    // Convert markdown-style formatting to HTML
     formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
     formatted = formatted.replace(/\*(.*?)\*/g, '<em>$1</em>');
-
-    // Convert bullet points
     formatted = formatted.replace(/^- (.*$)/gim, '<li>$1</li>');
     formatted = formatted.replace(/^• (.*$)/gim, '<li>$1</li>');
-
-    // Wrap consecutive list items in ul tags
     formatted = formatted.replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>');
     formatted = formatted.replace(/<\/ul>\s*<ul>/g, '');
 
-    // Convert line breaks to paragraphs
     const paragraphs = formatted.split('\n\n');
     const htmlParagraphs = paragraphs.map(p => {
         p = p.trim();
@@ -565,49 +463,41 @@ function showMOATError(errorMessage) {
 }
 
 function resetMOATAnalysis() {
-    // Reset to initial state
     document.getElementById('moat-loading').style.display = 'none';
     document.getElementById('moat-content').style.display = 'none';
     document.getElementById('moat-error').style.display = 'none';
     document.getElementById('moat-initial').style.display = 'block';
 
-    // Clear content
     document.getElementById('moat-executive-summary').innerHTML = '<p class="text-muted">Executive summary will appear here after analysis...</p>';
     document.getElementById('moat-analysis-content').innerHTML = '<p class="text-muted">MOAT analysis will appear here after analysis...</p>';
     document.getElementById('market-positioning-content').innerHTML = '<p class="text-muted">Market positioning analysis will appear here after analysis...</p>';
     document.getElementById('competitive-landscape-content').innerHTML = '<p class="text-muted">Competitive landscape analysis will appear here after analysis...</p>';
 
-    // Reset title
     const mainTitle = document.querySelector('.col-lg-9 .card-panel h5');
     if (mainTitle) {
         mainTitle.innerHTML = '🏰 Competitive MOAT Analysis';
     }
 }
 
-// Manual tab switching function
 function switchMOATTab(tabId) {
     console.log('🔄 Switching to tab:', tabId);
 
-    // Hide all tab panes
     const allPanes = document.querySelectorAll('#moatTabContent .tab-pane');
     allPanes.forEach(pane => {
         pane.classList.remove('show', 'active');
     });
 
-    // Remove active class from all tabs
     const allTabs = document.querySelectorAll('#moatTabs .nav-link');
     allTabs.forEach(tab => {
         tab.classList.remove('active');
     });
 
-    // Show the selected tab pane
     const selectedPane = document.getElementById(tabId);
     if (selectedPane) {
         selectedPane.classList.add('show', 'active');
         console.log('✅ Activated pane:', tabId);
     }
 
-    // Activate the corresponding tab button
     const selectedTab = document.querySelector(`#moatTabs button[data-bs-target="#${tabId}"]`);
     if (selectedTab) {
         selectedTab.classList.add('active');
@@ -615,193 +505,6 @@ function switchMOATTab(tabId) {
     }
 }
 
-// Initialize manual tab handlers
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('🔧 Setting up MOAT tabs...');
-
-    // Add click handlers to each tab
-    const tabs = [
-        { buttonId: 'executive-tab', paneId: 'executive' },
-        { buttonId: 'moat-tab', paneId: 'moat' },
-        { buttonId: 'positioning-tab', paneId: 'positioning' },
-        { buttonId: 'competitive-tab', paneId: 'competitive' }
-    ];
-
-    tabs.forEach(tab => {
-        const button = document.getElementById(tab.buttonId);
-        if (button) {
-            button.addEventListener('click', function(e) {
-                e.preventDefault();
-                console.log('🎯 Tab clicked:', tab.buttonId);
-                switchMOATTab(tab.paneId);
-            });
-            console.log('✅ Added handler for:', tab.buttonId);
-        } else {
-            console.log('❌ Button not found:', tab.buttonId);
-        }
-    });
-
-    console.log('✅ MOAT tabs initialized');
-});
-
-// ========================================
-// MODIFY YOUR EXISTING SUBMIT FUNCTION
-// ========================================
-
-// Find your existing submit button event listener and replace it with this:
-document.getElementById('submit').addEventListener('click', function() {
-    const ticker = document.getElementById('ticker').value.trim().toUpperCase();
-
-    if (!ticker) {
-        alert('Please enter a stock ticker');
-        return;
-    }
-
-    console.log(`📊 Starting analysis for ${ticker}...`);
-
-    // Reset MOAT analysis first
-    resetMOATAnalysis();
-
-    // YOUR EXISTING STOCK DATA LOADING CODE GOES HERE
-    // (Keep all your existing functionality - just add the MOAT analysis call)
-
-    // Start MOAT analysis after a short delay
-    setTimeout(() => {
-        console.log(`🏰 Starting MOAT analysis for ${ticker}...`);
-        runMOATAnalysis(ticker);
-    }, 2000); // Start MOAT analysis 2 seconds after main data load
-});
-
-// ========================================
-// HANDLE PERIOD CHANGES (1M, 3M, 6M, 1Y, 5Y)
-// ========================================
-
-// Add event listeners to period buttons to trigger MOAT analysis
-document.addEventListener('DOMContentLoaded', function() {
-    const periodButtons = document.querySelectorAll('input[name="period"]');
-
-    periodButtons.forEach(button => {
-        button.addEventListener('change', function() {
-            const ticker = document.getElementById('ticker').value.trim().toUpperCase();
-
-            if (ticker) {
-                console.log(`📅 Period changed to ${this.value} for ${ticker}`);
-
-                // Reset MOAT analysis
-                resetMOATAnalysis();
-
-                // YOUR EXISTING PERIOD CHANGE CODE GOES HERE
-                // (Keep your existing chart update logic)
-
-                // Restart MOAT analysis for new period
-                setTimeout(() => {
-                    console.log(`🏰 Restarting MOAT analysis for ${ticker} (${this.value} period)...`);
-                    runMOATAnalysis(ticker);
-                }, 1500);
-            }
-        });
-    });
-});
-
-// ========================================
-// AUTO-RUN ON PAGE LOAD (like your existing agent)
-// ========================================
-
-// Auto-run MOAT analysis when page loads (if ticker is pre-filled)
-document.addEventListener('DOMContentLoaded', function() {
-    // Wait a bit for page to fully load
-    setTimeout(() => {
-        const ticker = document.getElementById('ticker').value.trim().toUpperCase();
-
-        if (ticker) {
-            console.log(`🚀 Auto-starting MOAT analysis for pre-filled ticker: ${ticker}`);
-
-            // Wait for your existing stock analysis to start first
-            setTimeout(() => {
-                runMOATAnalysis(ticker);
-            }, 3000); // 3 second delay to let main analysis start first
-        }
-    }, 1000);
-});
-
-function updateAnalysisTimestamp(response) {
-    const timestampElement = document.getElementById('analysis-timestamp');
-    if (timestampElement && response &&  response.timestamp) {
-        const dbTimestamp = new Date(response.timestamp);
-        const dateString = dbTimestamp.toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric'
-        });
-        const timeString = dbTimestamp.toLocaleTimeString('en-US', {
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: true
-        });
-        timestampElement.textContent = `Last updated: ${dateString} at ${timeString}`;
-    }
-}
-
-
-// Function to show and setup the refresh button
-function setupAnalysisRefreshButton() {
-    const refreshBtn = document.getElementById('refresh-analysis-btn');
-    if (refreshBtn) {
-        // Show the button
-        refreshBtn.style.display = 'inline-block';
-
-        // Remove any existing click handlers to prevent duplicates
-        refreshBtn.removeEventListener('click', handleAnalysisRefresh);
-
-        // Add click handler
-        refreshBtn.addEventListener('click', handleAnalysisRefresh);
-    }
-}
-
-// Handle refresh button click
-function handleAnalysisRefresh() {
-    const ticker = $('#ticker').val().trim();
-    if (!ticker) {
-        alert('Please enter a ticker symbol first');
-        return;
-    }
-
-    console.log(`🔄 Refreshing analysis for ${ticker}...`);
-
-    // Show loading state
-    $('#analysis-loading').show();
-    $('#analysis-container .card-panel').removeClass('analysis-success');
-
-    // Make fresh analysis request
-    const analysisRequest = $.ajax({
-        url: '/analyze_stock',
-        type: 'POST',
-        data: {
-            ticker: ticker,
-            force_refresh: true // Add this parameter to bypass any caching
-        }
-    });
-
-    analysisRequest.done(function(response) {
-        $('#analysis-loading').hide();
-
-        if (response.success) {
-            displayAnalysisResults(response);
-            updateAnalysisTimestamp(response.data);  // Pass the response object
-            setupAnalysisRefreshButton();
-            console.log(`✅ Analysis refreshed in ${response.duration}s with ${response.search_calls} searches`);
-        } else {
-            displayAnalysisError(response.error);
-        }
-    });
-
-    analysisRequest.fail(function(error) {
-        $('#analysis-loading').hide();
-        displayAnalysisError('Analysis refresh failed. Please check your connection and try again.');
-    });
-}
-
-// Function to update MOAT analysis timestamp
 function updateMOATTimestamp(data) {
     const timestampElement = document.getElementById('moat-timestamp');
     if (timestampElement && data && data.timestamp) {
@@ -820,69 +523,199 @@ function updateMOATTimestamp(data) {
     }
 }
 
-// Function to show and setup the MOAT refresh button
 function setupMOATRefreshButton() {
     const refreshBtn = document.getElementById('refresh-moat-btn');
     if (refreshBtn) {
-        // Show the button
         refreshBtn.style.display = 'inline-block';
-
-        // Remove any existing click handlers to prevent duplicates
         refreshBtn.removeEventListener('click', handleMOATRefresh);
-
-        // Add click handler
         refreshBtn.addEventListener('click', handleMOATRefresh);
     }
 }
 
-// Handle MOAT refresh button click
 function handleMOATRefresh() {
-    const ticker = $('#ticker').val().trim();
-    if (!ticker) {
-        alert('Please enter a ticker symbol first');
-        return;
-    }
-
-    console.log(`🔄 Refreshing MOAT analysis for ${ticker}...`);
-
-    // Show loading state
-    showMOATLoading();
-
-    // Make fresh MOAT analysis request
-    fetch('/api/moat-analysis', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            ticker: ticker,
-            force_refresh: true // Add this parameter to bypass any caching
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        console.log('MOAT Analysis Refresh Response:', data);
-        if (data.success) {
-            displayMOATAnalysis(data.data);
-        } else {
-            showMOATError(data.error || 'MOAT analysis refresh failed');
-        }
-    })
-    .catch(error => {
-        console.error('MOAT Analysis Refresh Error:', error);
-        showMOATError('Failed to connect to MOAT analysis service');
-    });
+    console.log(`🔄 Refreshing MOAT analysis for ${$('#ticker').val().trim()}...`);
+    fetchMOATAnalysis(true);
 }
 
-// Moving Averages UI JavaScript
-$(document).ready(function() {
-    let customMAs = [];
+// ========================================
+// CHART EVENT HANDLERS
+// ========================================
 
-    // Preset button handlers
+function chartClickHandler(data) {
+    const clickMode = getChartClickMode();
+    const clickedY = data.points[0].y;
+
+    if (clickMode === 'fib') {
+        if ($('#manualFibMode').is(':checked')) {
+            $('#fibHighValue').val(clickedY.toFixed(2));
+            fetchChartAndFinancials();
+        }
+    } else if (clickMode === 'trendlines') {
+        const mode = $('#trendLineMode').val();
+        if (mode === 'off') return;
+
+        let clickedX = data.points[0].x;
+        if (mode === 'horizontal') {
+            trendLineCount++;
+            if (!chartDataX || chartDataX.length < 2) return;
+            const xStart = chartDataX[0];
+            const xEnd = chartDataX[chartDataX.length - 1];
+
+            const trace = {
+                x: [xStart, xEnd],
+                y: [clickedY, clickedY],
+                mode: 'lines',
+                line: {
+                    color: randomColor(),
+                    width: 2,
+                    dash: 'dot'
+                },
+                name: 'H-Line ' + trendLineCount,
+                hoverinfo: 'none'
+            };
+            Plotly.addTraces('graph', trace);
+        } else if (mode === 'point') {
+            if (!pointForLine) {
+                pointForLine = {
+                    x: clickedX,
+                    y: clickedY
+                };
+            } else {
+                trendLineCount++;
+                const trace = {
+                    x: [pointForLine.x, clickedX],
+                    y: [pointForLine.y, clickedY],
+                    mode: 'lines',
+                    line: {
+                        color: randomColor(),
+                        width: 2
+                    },
+                    name: 'Line ' + trendLineCount,
+                    hoverinfo: 'none'
+                };
+                Plotly.addTraces('graph', trace);
+                pointForLine = null;
+            }
+        }
+    }
+}
+
+// ========================================
+// EVENT LISTENERS
+// ========================================
+
+$(document).ready(function() {
+    // Watchlist table loading (unchanged)
+    if (cachedData && cachedCols) {
+        $('#watchlist-head').empty();
+        $('#watchlist-body').empty();
+
+        cachedCols.forEach(col => {
+            $('#watchlist-head').append(`<th>${col}</th>`);
+        });
+
+        cachedData.forEach(row => {
+            const rowHtml = cachedCols.map(col => {
+                const cellValue = row[col] !== null ? row[col] : '';
+
+                if (col === "5Y Multibagger Rate") {
+                    const rate = parseFloat(cellValue);
+                    let backgroundColor = "#ffffff";
+
+                    if (!isNaN(rate)) {
+                        const midpoint = 1.5;
+                        let intensity;
+
+                        if (rate < midpoint) {
+                            intensity = Math.round(255 * (rate / midpoint));
+                            backgroundColor = `rgb(255, ${intensity}, ${intensity})`;
+                        } else {
+                            const greenRange = Math.min(rate - midpoint, 3.5);
+                            intensity = Math.round(255 * (1 - greenRange / 2));
+                            backgroundColor = `rgb(${intensity}, 255, ${intensity})`;
+                        }
+                    }
+
+                    return `<td class="gradient-cell" style="background-color: ${backgroundColor}">${cellValue}</td>`;
+                }
+
+                return `<td>${cellValue}</td>`;
+            }).join('');
+
+            $('#watchlist-body').append(`<tr>${rowHtml}</tr>`);
+        });
+
+        $('#watchlist-table-container').show();
+
+        if ($.fn.DataTable.isDataTable('#watchlist-table')) {
+            $('#watchlist-table').DataTable().destroy();
+        }
+        $('#watchlist-table').DataTable({
+            pageLength: 25,
+            lengthMenu: [10, 25, 50, 100]
+        });
+    }
+
+    // Chart click mode change
+    $('input[name="chartClickMode"]').on('change', function() {
+        const mode = getChartClickMode();
+        if (mode === 'fib') {
+            $('#fibSettings').show();
+            $('#trendLineSettings').hide();
+        } else {
+            $('#fibSettings').hide();
+            $('#trendLineSettings').show();
+        }
+    });
+
+    // Fib toggles - only update chart
+    $('#manualFibMode').on('change', function() {
+        if (!$(this).is(':checked')) {
+            $('#fibHighValue').val('');
+        }
+        if (getChartClickMode() === 'fib') {
+            fetchChartAndFinancials();
+        }
+    });
+
+    $('#showExtensions').on('change', function() {
+        if (getChartClickMode() === 'fib') {
+            fetchChartAndFinancials();
+        }
+    });
+
+    $('#fibHighValue').on('change', function() {
+        if ($(this).val() && getChartClickMode() === 'fib') {
+            fetchChartAndFinancials();
+        }
+    });
+
+    // User projection sliders
+    $('#user-revenue-growth, #user-profit-margin, #user-pe-ratio').on('input', calculateUserProjection);
+
+    // MOAT tab handlers
+    const tabs = [
+        { buttonId: 'executive-tab', paneId: 'executive' },
+        { buttonId: 'moat-tab', paneId: 'moat' },
+        { buttonId: 'positioning-tab', paneId: 'positioning' },
+        { buttonId: 'competitive-tab', paneId: 'competitive' }
+    ];
+
+    tabs.forEach(tab => {
+        const button = document.getElementById(tab.buttonId);
+        if (button) {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                switchMOATTab(tab.paneId);
+            });
+        }
+    });
+
+    // Moving Averages UI
     $('#ma-preset-none').click(function() {
         $('.ma-checkbox').prop('checked', false);
         if ($('#auto-refresh-ma').is(':checked')) {
-            fetchStockData();
+            fetchChartAndFinancials();
         }
     });
 
@@ -890,7 +723,7 @@ $(document).ready(function() {
         $('.ma-checkbox').prop('checked', false);
         $('#ma-20, #ma-50').prop('checked', true);
         if ($('#auto-refresh-ma').is(':checked')) {
-            fetchStockData();
+            fetchChartAndFinancials();
         }
     });
 
@@ -898,7 +731,7 @@ $(document).ready(function() {
         $('.ma-checkbox').prop('checked', false);
         $('#ma-20, #ma-50, #ma-200').prop('checked', true);
         if ($('#auto-refresh-ma').is(':checked')) {
-            fetchStockData();
+            fetchChartAndFinancials();
         }
     });
 
@@ -906,18 +739,16 @@ $(document).ready(function() {
         $('.ma-checkbox').prop('checked', false);
         $('#ma-5, #ma-10, #ma-20').prop('checked', true);
         if ($('#auto-refresh-ma').is(':checked')) {
-            fetchStockData();
+            fetchChartAndFinancials();
         }
     });
 
-    // Individual checkbox handlers
     $('.ma-checkbox').change(function() {
         if ($('#auto-refresh-ma').is(':checked')) {
-            fetchStockData();
+            fetchChartAndFinancials();
         }
     });
 
-    // Custom MA functionality
     $('#add-custom-ma').click(function() {
         const period = parseInt($('#custom-ma-input').val());
         if (period && period > 0 && period <= 500) {
@@ -926,7 +757,7 @@ $(document).ready(function() {
                 updateCustomMADisplay();
                 $('#custom-ma-input').val('');
                 if ($('#auto-refresh-ma').is(':checked')) {
-                    fetchStockData();
+                    fetchChartAndFinancials();
                 }
             } else {
                 alert('This moving average period is already added.');
@@ -936,14 +767,12 @@ $(document).ready(function() {
         }
     });
 
-    // Allow Enter key to add custom MA
     $('#custom-ma-input').keypress(function(e) {
         if (e.which === 13) {
             $('#add-custom-ma').click();
         }
     });
 
-    // Function to update custom MA display
     function updateCustomMADisplay() {
         const customMAList = $('#custom-ma-list');
         customMAList.empty();
@@ -966,32 +795,27 @@ $(document).ready(function() {
         });
     }
 
-    // Remove custom MA
+    $('#chart-settings-toggle').click(function() {
+        $('#chart-settings').toggle();
+        $(this).text($('#chart-settings').is(':visible') ? 'Hide Settings' : 'Settings');
+    });
+
     $(document).on('click', '.remove-custom-ma', function() {
         const period = parseInt($(this).data('period'));
         customMAs = customMAs.filter(p => p !== period);
         updateCustomMADisplay();
         if ($('#auto-refresh-ma').is(':checked')) {
-            fetchStockData();
+            fetchChartAndFinancials();
         }
     });
 
-    // Function to get selected moving averages
-    window.getSelectedMovingAverages = function() {
-        const selectedMAs = [];
+    // Ticker/period listeners for full load
+    $('#submit').on('click', loadAllData);
+    $('#ticker').on('keypress', function(e) {
+        if (e.which === 13) loadAllData();
+    });
+    $('input[name="period"]').on('change', loadAllData);
 
-        // Get checked standard MAs
-        $('.ma-checkbox:checked').each(function() {
-            selectedMAs.push(parseInt($(this).val()));
-        });
-
-        // Add custom MAs
-        customMAs.forEach(function(period) {
-            selectedMAs.push(period);
-        });
-
-        // Remove duplicates and sort
-        return [...new Set(selectedMAs)].sort((a, b) => a - b);
-    };
+    // Auto-trigger on load
+    loadAllData();
 });
-

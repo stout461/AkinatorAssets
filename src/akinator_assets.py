@@ -187,7 +187,8 @@ def moat_analysis():
                 'data': {
                     'ticker': ticker,
                     'duration': cached['duration'],
-                    'sections': cached['sections']
+                    'sections': cached['sections'],
+                    'timestamp': cached.get('timestamp')
                 },
                 'error': None
             })
@@ -197,13 +198,15 @@ def moat_analysis():
 
         if result['success']:
             print(f"✅ MOAT analysis completed for {ticker}")
+            timestamp = datetime.now().isoformat()
             insert_moat_analysis(ticker, result["sections"], result["duration"])
             return jsonify({
                 'success': True,
                 'data': {
                     'ticker': result['ticker'],
                     'duration': result['duration'],
-                    'sections': result['sections']
+                    'sections': result['sections'],
+                    'timestamp': timestamp
                 },
                 'error': None
             })
@@ -268,7 +271,8 @@ def analyze_stock_route():
                     "search_calls": cached.get("search_calls"),
                     "executive_summary": cached.get("executive_summary"),
                     "metrics": cached.get("metrics"),
-                    "sections": cached.get("sections", {})
+                    "sections": cached.get("sections", {}),
+                    "timestamp": cached.get("timestamp")
                 },
                 "error": None
             })
@@ -285,7 +289,8 @@ def analyze_stock_route():
             "search_calls": result['search_calls'],
             "executive_summary": result['executive_summary'],
             "sections": result['parsed_sections'],
-            "metrics": result['metrics']
+            "metrics": result['metrics'],
+            "timestamp": datetime.now().isoformat()
         }
         insert_agent_output(ticker, output)
 
@@ -297,7 +302,8 @@ def analyze_stock_route():
                 "search_calls": result['search_calls'],
                 "executive_summary": result['executive_summary'],
                 "metrics": result['metrics'],
-                "sections": result['parsed_sections']
+                "sections": result['parsed_sections'],
+                "timestamp": cached.get("timestamp")
             },
             "error": None
         })

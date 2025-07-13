@@ -238,25 +238,134 @@ class StockPlotter:
         signal_line = macd_line.ewm(span=signal, adjust=False).mean()
         histogram = macd_line - signal_line
         return macd_line, signal_line, histogram
-
-    def detect_elliott_waves(self, prices, window=20):
-        normalized_prices = (prices - prices.min()) / (prices.max() - prices.min())
-        peaks, _ = find_peaks(normalized_prices, distance=window)
-        troughs, _ = find_peaks(-normalized_prices, distance=window)
+    # TODO Improve the Elliott Wave detection logic
+    def detect_elliott_waves(self, prices, min_distance=None, prominence=0.02):
+        if min_distance is None:
+            min_distance = max(5, len(prices) // 40)  # Adaptive
+        smoothed = prices.ewm(span=3).mean()  # Light smoothing
+        normalized_prices = (smoothed - smoothed.min()) / (smoothed.max() - smoothed.min() + 1e-8)
+        peaks, _ = find_peaks(normalized_prices, distance=min_distance, prominence=prominence)
+        troughs, _ = find_peaks(-normalized_prices, distance=min_distance, prominence=prominence)
         return peaks, troughs
 
+    def validate_impulse(self, prices, points):
+        if len(points) != 6:
+            return False
+        p = [prices.iloc[pt[0]] for pt in points]
+        is_up = p[5] > p[0]
+
+        w = [p[j+1] - p[j] for j in range(5)]
+
+        if is_up:
+            # Main waves >0, corrective <0
+            if w[0] <=0 or w[2] <=0 or w[4] <=0 or w[1] >=0 or w[3] >=0:
+                return False
+            w_len = [abs(w[i]) for i in range(5)]
+            overlap = p[4] < p[1]
+        else:
+            # Main <0, corrective >0
+            if w[0] >=0 or w[2] >=0 or w[4] >=0 or w[1] <=0 or w[3] <=0:
+                return False
+            w_len = [abs(w[i]) for i in range(5)]
+            overlap = p[4] > p[1]
+
+        w1_len, w2_len, w3_len, w4_len, w5_len = w_len
+
+        # Wave 3 not shortest (relaxed to >80%)
+        if w3_len < 0.8 * max(w1_len, w5_len):
+            return False
+
+        # Wave 2 retrace <100%, >30%
+        retr2 = w2_len / w1_len
+        if retr2 >= 1 or retr2 < 0.3:
+            return False
+
+        # Wave 4 retrace <50%, >20%
+        retr4 = w4_len / w3_len
+        if retr4 >= 0.5 or retr4 < 0.2:
+            return False
+
+        # No overlap
+        if overlap:
+            return False
+
+        return True
+
+    def validate_correction(self, prices, points):
+        if len(points) != 4:
+            return False
+        p = [prices.iloc[pt[0]] for pt in points]
+        is_down = p[3] < p[0]
+
+        w = [p[j+1] - p[j] for j in range(3)]
+
+        if is_down:
+            # A <0, C <0, B >0
+            if w[0] >=0 or w[2] >=0 or w[1] <=0:
+                return False
+            w_len = [abs(w[i]) for i in range(3)]
+        else:
+            # A >0, C >0, B <0
+            if w[0] <=0 or w[2] <=0 or w[1] >=0:
+                return False
+            w_len = [abs(w[i]) for i in range(3)]
+
+        wa_len, wb_len, wc_len = w_len
+
+        # Wave C ~ A (0.618-1.618)
+        ratio_c = wc_len / wa_len
+        if ratio_c < 0.618 or ratio_c > 1.618:
+            return False
+
+        # Wave B retrace 38-78%
+        retr_b = wb_len / wa_len
+        if retr_b < 0.38 or retr_b > 0.78:
+            return False
+
+        return True
+
     def identify_wave_patterns(self, prices, peaks, troughs):
-        patterns = []
+        patterns = {'impulse': [], 'correction': []}
         combined = sorted([(i, 'peak') for i in peaks] + [(i, 'trough') for i in troughs])
 
-        for i in range(len(combined) - 4):
-            pattern = combined[i:i+5]
-            if all(p[1] != q[1] for p, q in zip(pattern, pattern[1:])):
-                patterns.append({
-                    'start': pattern[0][0],
-                    'end': pattern[-1][0],
-                    'points': pattern
-                })
+        i = 0
+        while i < len(combined) - 3:
+            # Look for 6-point impulse
+            if len(combined) - i >= 6:
+                impulse = combined[i:i+6]
+                if all(p[1] != q[1] for p, q in zip(impulse, impulse[1:])):
+                    if self.validate_impulse(prices, impulse):
+                        patterns['impulse'].append({
+                            'start': impulse[0][0],
+                            'end': impulse[5][0],
+                            'points': impulse
+                        })
+                        i += 5
+                        # Look for 4-point correction
+                        if len(combined) - i >= 4:
+                            correction = combined[i:i+4]
+                            if all(p[1] != q[1] for p, q in zip(correction, correction[1:])):
+                                if self.validate_correction(prices, correction):
+                                    patterns['correction'].append({
+                                        'start': correction[0][0],
+                                        'end': correction[3][0],
+                                        'points': correction
+                                    })
+                                    i += 4
+                                    continue
+            # Look for standalone 4-point correction
+            if len(combined) - i >= 4:
+                correction = combined[i:i+4]
+                if all(p[1] != q[1] for p, q in zip(correction, correction[1:])):
+                    if self.validate_correction(prices, correction):
+                        patterns['correction'].append({
+                            'start': correction[0][0],
+                            'end': correction[3][0],
+                            'points': correction
+                        })
+                        i += 4
+                        continue
+            i += 1
 
         return patterns
 
@@ -264,26 +373,69 @@ class StockPlotter:
         peaks, troughs = self.detect_elliott_waves(prices)
         patterns = self.identify_wave_patterns(prices, peaks, troughs)
 
-        if patterns:
-            # Take the most recent pattern
-            recent_pattern = patterns[-1]
-            pattern_points = recent_pattern['points']
-
-            x_pattern = [df.index[p[0]].strftime('%Y-%m-%d') for p in pattern_points]
-            y_pattern = [prices.iloc[p[0]] for p in pattern_points]
-            labels = ['1', '2', '3', '4', '5']
+        # Plot only the last impulse if any
+        if patterns['impulse']:
+            pattern = patterns['impulse'][-1]
+            points = pattern['points']
+            x_pattern = [df.index[p[0]].strftime('%Y-%m-%d') for p in points]
+            y_pattern = [prices.iloc[p[0]] for p in points]
+            labels = ['0', '1', '2', '3', '4', '5'] if len(points) == 6 else []
 
             fig.add_trace(go.Scatter(
                 x=x_pattern,
                 y=y_pattern,
-                mode='lines+markers+text',
-                name='Elliott Wave',
-                line=dict(color='purple', dash='dot', width=2),
-                marker=dict(size=8),
-                text=labels,
-                textposition='top center',
-                textfont=dict(size=12, color='purple')
-            ), row=row, col=col)
+                mode='lines',
+                name='Impulse',
+                line=dict(color='blue', width=1.5),
+                hovertemplate='Price: %{y:.2f}<extra></extra>'
+            ), row=row, col=1)
+
+            # Add boxed labels
+            for j, label in enumerate(labels):
+                fig.add_annotation(
+                    x=x_pattern[j],
+                    y=y_pattern[j],
+                    text=label,
+                    showarrow=False,
+                    font=dict(color='blue', size=10),
+                    bgcolor='white',
+                    bordercolor='blue',
+                    borderwidth=1,
+                    borderpad=2,
+                    opacity=0.8
+                )
+
+        # Plot only the last correction if any
+        if patterns['correction']:
+            pattern = patterns['correction'][-1]
+            points = pattern['points']
+            x_pattern = [df.index[p[0]].strftime('%Y-%m-%d') for p in points]
+            y_pattern = [prices.iloc[p[0]] for p in points]
+            labels = ['0', 'A', 'B', 'C'] if len(points) == 4 else []
+
+            fig.add_trace(go.Scatter(
+                x=x_pattern,
+                y=y_pattern,
+                mode='lines',
+                name='Correction',
+                line=dict(color='red', dash='dash', width=1.5),
+                hovertemplate='Price: %{y:.2f}<extra></extra>'
+            ), row=row, col=1)
+
+            # Add boxed labels
+            for j, label in enumerate(labels):
+                fig.add_annotation(
+                    x=x_pattern[j],
+                    y=y_pattern[j],
+                    text=label,
+                    showarrow=False,
+                    font=dict(color='red', size=10),
+                    bgcolor='white',
+                    bordercolor='red',
+                    borderwidth=1,
+                    borderpad=2,
+                    opacity=0.8
+                )
 
     def add_moving_averages(self, fig, df, x_dates, ma_periods=None, row=1, col=1):
         """

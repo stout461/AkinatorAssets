@@ -16,3 +16,5 @@ plotly~=6.2.0
 APScheduler~=3.11.0
 pytz~=2025.2
 auth~=0.5.3
+scipy~=1.16.0
+stripe~=12.3.0

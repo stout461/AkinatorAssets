@@ -450,3 +450,60 @@ h1 {
 .timestamp-stale {
     color: #dc3545;
 }
+
+.ma-color-indicator {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 5px;
+    border: 1px solid #ccc;
+}
+
+.custom-ma-tag {
+    display: inline-block;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 2px 8px;
+    margin: 2px;
+    font-size: 0.875rem;
+}
+
+.custom-ma-tag .remove-custom-ma {
+    margin-left: 5px;
+    cursor: pointer;
+    color: #dc3545;
+    font-weight: bold;
+}
+
+.custom-ma-tag .remove-custom-ma:hover {
+    color: #c82333;
+}
+
+#custom-ma-list {
+    min-height: 30px;
+    border: 1px dashed #dee2e6;
+    border-radius: 4px;
+    padding: 5px;
+    background-color: #f8f9fa;
+}
+
+/* Optional: Style for the moving averages section */
+.ma-checkbox:checked + .form-check-label {
+    font-weight: bold;
+}
+
+.btn-group .btn-sm {
+    font-size: 0.8rem;
+}
+
+.settings-section {
+    padding: 10px;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+}
+
+.text-purple {
+    color: #6f42c1;
+}

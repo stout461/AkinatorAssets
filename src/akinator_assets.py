@@ -396,6 +396,10 @@ def plot():
                 print("Error parsing moving average periods, using defaults")
                 moving_averages = []
 
+        # ADD: Elliott Wave Support
+        elliott_points_str = request.form.get('elliott_points', '')
+        elliott_points = json.loads(elliott_points_str) if elliott_points_str else None
+
         # Use StockPlotter to create the plot
         result = stock_plotter.create_stock_plot(
             ticker=ticker,
@@ -406,7 +410,8 @@ def plot():
             fib_high=fib_high,
             moving_averages=moving_averages,
             show_fib=show_fib,
-            include_financials=include_financials  # Pass new param
+            include_financials=include_financials,  # Pass new param
+            elliott_points=elliott_points  # Pass Elliott points
         )
 
         # Convert figure to JSON

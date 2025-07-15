@@ -418,7 +418,7 @@
         <div id="chart-settings" style="display: none; margin-bottom: 15px;">
             <div class="row">
                 <!-- Section 1: Chart Click Mode -->
-                <div class="col-md-4 settings-section pr-3 border-right">
+                <div class="col-md-4 settings-section pr-3 border-right">  <!-- Keep your classes if you have Bootstrap -->
                     <h6>Chart Click Mode</h6>
                     <div class="form-check form-check-inline">
                         <input class="form-check-input" type="radio" name="chartClickMode" id="fibMode" value="fib" checked>
@@ -428,8 +428,13 @@
                         <input class="form-check-input" type="radio" name="chartClickMode" id="trendlinesMode" value="trendlines">
                         <label class="form-check-label" for="trendlinesMode">Trendlines</label>
                     </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="chartClickMode" id="elliottMode" value="elliott">  <!-- Fix: lowercase 'elliott' to match script.js -->
+                        <label class="form-check-label" for="elliottMode">Elliott</label>
+                    </div>
                 </div>
 
+                <!-- Fibonacci Settings -->
                 <!-- Section 2: Mode-Specific Settings -->
                 <div class="col-md-4 settings-section px-3 border-right">
                     <div id="fibSettings" style="display: block;">
@@ -458,8 +463,13 @@
                             <option value="point">Point-to-Point</option>
                         </select>
                     </div>
+                    <!-- Elliott Settings -->
+                    <div id="elliott-settings" style="display: none;">
+                        <h6>Elliott Wave Points (Click chart to add turning points)</h6>
+                        <ul id="elliott-points-list"></ul>
+                        <button id="clear-elliott-points">Clear Points</button>
+                    </div>
                 </div>
-
                 <!-- Section 3: Moving Averages -->
                 <div class="col-md-4 settings-section pl-3">
                     <h6>📊 Moving Averages</h6>

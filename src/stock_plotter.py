@@ -30,6 +30,12 @@ class StockPlotter:
             'colors': ['#FF6666', '#FF8888', '#FFAAAA', '#FFC0CB']
         }
 
+        # ADD: User-Defined Elliott Wave Projections - Define Fibonacci ratios for projections
+        self.wave2_retracements = [0.5, 0.618, 0.764, 0.854]
+        self.wave3_extensions = [1.0, 1.236, 1.382, 1.618, 2.0, 2.618]
+        self.wave4_retracements = [0.146, 0.236, 0.382, .50, 0.618, 0.764]
+        self.wave5_extensions = [1, 1.236, 1.618]  # For inverse of wave 4; additional handled in method
+
     @staticmethod
     def format_growth(value):
         """Convert value to percentage format"""
@@ -369,7 +375,8 @@ class StockPlotter:
 
         return patterns
 
-    def add_elliott_waves(self, fig, df, prices, x_dates, row=1, col=1):
+    # Renamed from add_elliott_waves (original auto-detection)
+    def add_auto_elliott_waves(self, fig, df, prices, x_dates, row=1, col=1):
         peaks, troughs = self.detect_elliott_waves(prices)
         patterns = self.identify_wave_patterns(prices, peaks, troughs)
 
@@ -435,6 +442,200 @@ class StockPlotter:
                     borderwidth=1,
                     borderpad=2,
                     opacity=0.8
+                )
+
+    # ADD: User-Defined Elliott Wave Projections
+    def add_user_elliott_waves(self, fig, x_dates, elliott_points, row=1, col=1):
+        if not elliott_points or len(elliott_points) < 2:
+            return
+
+        num_points = len(elliott_points)
+        x_wave = [p['x'] for p in elliott_points]
+        y_wave = [float(p['y']) for p in elliott_points]
+
+        # Draw user-defined wave lines and markers
+        fig.add_trace(go.Scatter(
+            x=x_wave,
+            y=y_wave,
+            mode='lines+markers',
+            name='User Elliott Waves',
+            line=dict(color='purple', width=2),
+            marker=dict(size=8),
+            hovertemplate='Price: %{y:.2f}<extra></extra>'
+        ), row=row, col=1)
+
+        # Add labels (0,1,2,3,4,5)
+        labels = ['0', '1', '2', '3', '4', '5'][:num_points]
+        for i, label in enumerate(labels):
+            fig.add_annotation(
+                x=x_wave[i],
+                y=y_wave[i],
+                text=label,
+                showarrow=False,
+                font=dict(color='purple', size=12),
+                bgcolor='white',
+                bordercolor='purple',
+                borderwidth=1,
+                borderpad=2,
+                opacity=0.8
+            )
+
+        # No projections if 6+ points (full impulse or more)
+        if num_points >= 6:
+            return
+
+        # Determine direction from Wave 1 (points 0 to 1)
+        wave1_delta = y_wave[1] - y_wave[0]
+        is_up = wave1_delta > 0
+
+        last_date = x_dates[-1]
+
+        if num_points == 2:
+            # Project Wave 2 retracements of Wave 1 (corrective)
+            proj_color = 'red' if is_up else 'green'
+            wave1_len = abs(y_wave[1] - y_wave[0])
+            for retr in self.wave2_retracements:
+                if is_up:
+                    target = y_wave[1] - retr * wave1_len
+                else:
+                    target = y_wave[1] + retr * wave1_len
+                fig.add_trace(go.Scatter(
+                    x=[x_wave[-1], last_date],
+                    y=[target, target],
+                    mode='lines',
+                    line=dict(dash='dash', color=proj_color, width=1),
+                    name=f'W2 {retr*100:.1f}% Retr.',
+                    hoverinfo='name+y'
+                ), row=row, col=1)
+                fig.add_annotation(
+                    x=last_date,
+                    y=target,
+                    text=f'W2 {retr*100:.1f}%',
+                    showarrow=False,
+                    xanchor='left',
+                    font=dict(color='purple', size=10)
+                )
+
+        elif num_points == 3:
+            # Project Wave 3 extensions of Wave 1 from end of Wave 2 (impulsive)
+            proj_color = 'green' if is_up else 'red'
+            wave1_len = abs(y_wave[1] - y_wave[0])
+            wave2_end = y_wave[2]
+            for ext in self.wave3_extensions:
+                if is_up:
+                    target = wave2_end + ext * wave1_len
+                else:
+                    target = wave2_end - ext * wave1_len
+                fig.add_trace(go.Scatter(
+                    x=[x_wave[-1], last_date],
+                    y=[target, target],
+                    mode='lines',
+                    line=dict(dash='dash', color=proj_color, width=1),
+                    name=f'W3 {ext*100:.1f}% Ext.',
+                    hoverinfo='name+y'
+                ), row=row, col=1)
+                fig.add_annotation(
+                    x=last_date,
+                    y=target,
+                    text=f'W3 {ext*100:.1f}%',
+                    showarrow=False,
+                    xanchor='left',
+                    font=dict(color='purple', size=10)
+                )
+
+        elif num_points == 4:
+            # Project Wave 4 retracements of Wave 3 (corrective)
+            proj_color = 'red' if is_up else 'green'
+            wave3_start = y_wave[2]
+            wave3_end = y_wave[3]
+            wave3_len = abs(wave3_end - wave3_start)
+
+            for retr in self.wave4_retracements:
+                if is_up:
+                    target = wave3_end - retr * wave3_len
+                else:
+                    target = wave3_end + retr * wave3_len
+                fig.add_trace(go.Scatter(
+                    x=[x_wave[-1], last_date],
+                    y=[target, target],
+                    mode='lines',
+                    line=dict(dash='dash', color=proj_color, width=1),
+                    name=f'W4 {retr*100:.1f}% Retr.',
+                    hoverinfo='name+y'
+                ), row=row, col=1)
+                fig.add_annotation(
+                    x=last_date,
+                    y=target,
+                    text=f'W4 {retr*100:.1f}%',
+                    showarrow=False,
+                    xanchor='left',
+                    font=dict(color='purple', size=10)
+                )
+
+        elif num_points == 5:
+            # Project Wave 5 using multiple Fibonacci methods (impulsive)
+            proj_color = 'green' if is_up else 'red'
+            wave4_end = y_wave[4]
+            wave1_len = abs(y_wave[1] - y_wave[0])
+            wave13_len = abs(y_wave[3] - y_wave[0])
+            wave4_len = abs(y_wave[4] - y_wave[3])
+
+            # Method 1: Equal to Wave 1
+            target_eq = wave4_end + wave1_len if is_up else wave4_end - wave1_len
+            fig.add_trace(go.Scatter(
+                x=[x_wave[-1], last_date],
+                y=[target_eq, target_eq],
+                mode='lines',
+                line=dict(dash='dash', color=proj_color, width=1),
+                name='W5 = W1',
+                hoverinfo='name+y'
+            ), row=row, col=1)
+            fig.add_annotation(
+                x=last_date,
+                y=target_eq,
+                text='W5 = W1',
+                showarrow=False,
+                xanchor='left',
+                font=dict(color='purple', size=10)
+            )
+
+            # Method 2: 61.8% of Waves 1+3 (from 0 to 3)
+            target_618 = wave4_end + 0.618 * wave13_len if is_up else wave4_end - 0.618 * wave13_len
+            fig.add_trace(go.Scatter(
+                x=[x_wave[-1], last_date],
+                y=[target_618, target_618],
+                mode='lines',
+                line=dict(dash='dash', color=proj_color, width=1),
+                name='W5 61.8% W1+3',
+                hoverinfo='name+y'
+            ), row=row, col=1)
+            fig.add_annotation(
+                x=last_date,
+                y=target_618,
+                text='W5 61.8% W1+3',
+                showarrow=False,
+                xanchor='left',
+                font=dict(color='purple', size=10)
+            )
+
+            # Method 3: Inverse 1.236-1.618% extension of Wave 4
+            for ext in self.wave5_extensions:
+                target = wave4_end + ext * wave4_len if is_up else wave4_end - ext * wave4_len
+                fig.add_trace(go.Scatter(
+                    x=[x_wave[-1], last_date],
+                    y=[target, target],
+                    mode='lines',
+                    line=dict(dash='dash', color=proj_color, width=1),
+                    name=f'W5 {ext*100:.1f}% W4',
+                    hoverinfo='name+y'
+                ), row=row, col=1)
+                fig.add_annotation(
+                    x=last_date,
+                    y=target,
+                    text=f'W5 {ext*100:.1f}% W4',
+                    showarrow=False,
+                    xanchor='left',
+                    font=dict(color='purple', size=10)
                 )
 
     def add_moving_averages(self, fig, df, x_dates, ma_periods=None, row=1, col=1):
@@ -533,7 +734,7 @@ class StockPlotter:
 
     def create_stock_plot(self, ticker, period, chart_mode='fib', manual_fib=False,
                           show_extensions=False, fib_high=None, moving_averages=None,
-                          show_fib=False, include_financials=True):
+                          show_fib=False, include_financials=True, elliott_points=None):
         """
         Create a complete stock plot with price data and optional indicators.
 
@@ -547,6 +748,7 @@ class StockPlotter:
             moving_averages: List of moving average periods (e.g., [20, 50, 200])
             show_fib: Whether to show Fibonacci lines (default: False)
             include_financials: Whether to include financial metrics (default: True)
+            elliott_points: List of user-defined points for Elliott waves (default: None)
 
         Returns:
             dict: Contains figure, price stats, financial metrics, and price target
@@ -600,8 +802,11 @@ class StockPlotter:
                 fib_high_val = df['Close'].max()
             self.add_fibonacci_lines(fig, x_dates, fib_high_val, fib_low_val, show_extensions, row=1, col=1)
 
-        # Add Elliott Waves
-        self.add_elliott_waves(fig, df, df['Close'], x_dates, row=1, col=1)
+        # ADD: User-Defined Elliott Wave Projections - Add auto waves if no user points, else user projections
+        if elliott_points:
+            self.add_user_elliott_waves(fig, x_dates, elliott_points, row=1, col=1)
+        else:
+            self.add_auto_elliott_waves(fig, df, df['Close'], x_dates, row=1, col=1)
 
         # Add RSI subplot
         rsi = self.calculate_rsi(df['Close'])

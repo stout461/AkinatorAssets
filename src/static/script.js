@@ -5,6 +5,9 @@ let pointForLine = null;
 let trendLineCount = 0;
 let customMAs = [];
 
+// ADD: Elliott Wave Support
+let elliottPoints = [];
+
 // ========================================
 // UTILITY FUNCTIONS
 // ========================================
@@ -35,6 +38,16 @@ function getSelectedMovingAverages() {
     return [...new Set(selectedMAs)].sort((a, b) => a - b);
 }
 
+// ADD: Elliott Wave Support
+function updateElliottDisplay() {
+    const list = $('#elliott-points-list');
+    console.log('Updating Elliott display with points:', elliottPoints);
+    list.empty();
+    elliottPoints.forEach((p, i) => {
+        list.append(`<li>Point ${i}: ${p.x} - $${p.y} <button class="remove-elliott-point btn btn-sm btn-danger" data-index="${i}">Remove</button></li>`);
+    });
+}
+
 // ========================================
 // FETCH FUNCTIONS
 // ========================================
@@ -50,6 +63,9 @@ function getCommonFetchParams() {
     const movingAveragesParam = selectedMAs.length > 0 ? selectedMAs.join(',') : '';
     const showFib = $('#showFib').is(':checked');
 
+    // ADD: Elliott Wave Support
+    const elliottPointsParam = (chartMode === 'elliott' && elliottPoints.length > 0) ? JSON.stringify(elliottPoints) : '';
+
     return {
         ticker,
         period,
@@ -58,7 +74,9 @@ function getCommonFetchParams() {
         showExtensions,
         fibHigh,
         movingAverages: movingAveragesParam,
-        showFib
+        showFib,
+        // ADD: Elliott Wave Support
+        elliott_points: elliottPointsParam
     };
 }
 
@@ -609,6 +627,13 @@ function chartClickHandler(data) {
                 pointForLine = null;
             }
         }
+    // ADD: Elliott Wave Support
+    } else if (clickMode === 'elliott') {
+        const clickedX = data.points[0].x;
+        const clickedY = data.points[0].y.toFixed(2);
+        elliottPoints.push({ x: clickedX, y: clickedY });
+        updateElliottDisplay();
+        fetchChartAndFinancials(true);  // Refresh chart only to show updates and projections
     }
 }
 
@@ -674,9 +699,19 @@ $(document).ready(function() {
         if (mode === 'fib') {
             $('#fibSettings').show();
             $('#trendLineSettings').hide();
-        } else {
+            // ADD: Elliott Wave Support
+            $('#elliott-settings').hide();
+        } else if (mode === 'trendlines') {
             $('#fibSettings').hide();
             $('#trendLineSettings').show();
+            // ADD: Elliott Wave Support
+            $('#elliott-settings').hide();
+        // ADD: Elliott Wave Support
+        } else if (mode === 'elliott') {
+            $('#fibSettings').hide();
+            $('#trendLineSettings').hide();
+            $('#elliott-settings').show();
+            updateElliottDisplay();  // Show current points if any
         }
     });
 
@@ -825,6 +860,21 @@ $(document).ready(function() {
         if ($('#auto-refresh-ma').is(':checked')) {
             fetchChartAndFinancials(true);
         }
+    });
+
+    // ADD: Elliott Wave Support - Remove point handler
+    $(document).on('click', '.remove-elliott-point', function() {
+        const index = $(this).data('index');
+        elliottPoints.splice(index, 1);
+        updateElliottDisplay();
+        fetchChartAndFinancials(true);
+    });
+
+    // ADD: Elliott Wave Support - Clear points
+    $('#clear-elliott-points').click(function() {
+        elliottPoints = [];
+        updateElliottDisplay();
+        fetchChartAndFinancials(true);
     });
 
     // Ticker/period listeners for full load

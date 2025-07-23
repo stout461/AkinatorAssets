@@ -444,8 +444,9 @@ class StockPlotter:
                     opacity=0.8
                 )
 
-    # ADD: User-Defined Elliott Wave Projections
-    def add_user_elliott_waves(self, fig, x_dates, elliott_points, row=1, col=1):
+    # ADD: User-Defined Elliott Wave Projections with Enhanced Features
+    def add_user_elliott_waves(self, fig, x_dates, elliott_points, row=1, col=1, 
+                              show_fib_levels=False, extend_projections=True):
         if not elliott_points or len(elliott_points) < 2:
             return
 
@@ -488,7 +489,11 @@ class StockPlotter:
         wave1_delta = y_wave[1] - y_wave[0]
         is_up = wave1_delta > 0
 
-        last_date = x_dates[-1]
+        # Extend projections well into the future to handle chart panning
+        from datetime import datetime, timedelta
+        last_date_obj = datetime.strptime(x_dates[-1], '%Y-%m-%d')
+        extended_date = last_date_obj + timedelta(days=365)  # Extend 1 year into future
+        extended_date_str = extended_date.strftime('%Y-%m-%d')
 
         if num_points == 2:
             # Project Wave 2 retracements of Wave 1 (corrective)
@@ -500,7 +505,7 @@ class StockPlotter:
                 else:
                     target = y_wave[1] + retr * wave1_len
                 fig.add_trace(go.Scatter(
-                    x=[x_wave[-1], last_date],
+                    x=[x_wave[-1], extended_date_str],
                     y=[target, target],
                     mode='lines',
                     line=dict(dash='dash', color=proj_color, width=1),
@@ -508,7 +513,7 @@ class StockPlotter:
                     hoverinfo='name+y'
                 ), row=row, col=1)
                 fig.add_annotation(
-                    x=last_date,
+                    x=extended_date_str,
                     y=target,
                     text=f'W2 {retr*100:.1f}%',
                     showarrow=False,
@@ -527,7 +532,7 @@ class StockPlotter:
                 else:
                     target = wave2_end - ext * wave1_len
                 fig.add_trace(go.Scatter(
-                    x=[x_wave[-1], last_date],
+                    x=[x_wave[-1], extended_date_str],
                     y=[target, target],
                     mode='lines',
                     line=dict(dash='dash', color=proj_color, width=1),
@@ -535,7 +540,7 @@ class StockPlotter:
                     hoverinfo='name+y'
                 ), row=row, col=1)
                 fig.add_annotation(
-                    x=last_date,
+                    x=extended_date_str,
                     y=target,
                     text=f'W3 {ext*100:.1f}%',
                     showarrow=False,
@@ -556,7 +561,7 @@ class StockPlotter:
                 else:
                     target = wave3_end + retr * wave3_len
                 fig.add_trace(go.Scatter(
-                    x=[x_wave[-1], last_date],
+                    x=[x_wave[-1], extended_date_str],
                     y=[target, target],
                     mode='lines',
                     line=dict(dash='dash', color=proj_color, width=1),
@@ -564,7 +569,7 @@ class StockPlotter:
                     hoverinfo='name+y'
                 ), row=row, col=1)
                 fig.add_annotation(
-                    x=last_date,
+                    x=extended_date_str,
                     y=target,
                     text=f'W4 {retr*100:.1f}%',
                     showarrow=False,
@@ -583,7 +588,7 @@ class StockPlotter:
             # Method 1: Equal to Wave 1
             target_eq = wave4_end + wave1_len if is_up else wave4_end - wave1_len
             fig.add_trace(go.Scatter(
-                x=[x_wave[-1], last_date],
+                x=[x_wave[-1], extended_date_str],
                 y=[target_eq, target_eq],
                 mode='lines',
                 line=dict(dash='dash', color=proj_color, width=1),
@@ -591,7 +596,7 @@ class StockPlotter:
                 hoverinfo='name+y'
             ), row=row, col=1)
             fig.add_annotation(
-                x=last_date,
+                x=extended_date_str,
                 y=target_eq,
                 text='W5 = W1',
                 showarrow=False,
@@ -602,7 +607,7 @@ class StockPlotter:
             # Method 2: 61.8% of Waves 1+3 (from 0 to 3)
             target_618 = wave4_end + 0.618 * wave13_len if is_up else wave4_end - 0.618 * wave13_len
             fig.add_trace(go.Scatter(
-                x=[x_wave[-1], last_date],
+                x=[x_wave[-1], extended_date_str],
                 y=[target_618, target_618],
                 mode='lines',
                 line=dict(dash='dash', color=proj_color, width=1),
@@ -610,7 +615,7 @@ class StockPlotter:
                 hoverinfo='name+y'
             ), row=row, col=1)
             fig.add_annotation(
-                x=last_date,
+                x=extended_date_str,
                 y=target_618,
                 text='W5 61.8% W1+3',
                 showarrow=False,
@@ -622,7 +627,7 @@ class StockPlotter:
             for ext in self.wave5_extensions:
                 target = wave4_end + ext * wave4_len if is_up else wave4_end - ext * wave4_len
                 fig.add_trace(go.Scatter(
-                    x=[x_wave[-1], last_date],
+                    x=[x_wave[-1], extended_date_str],
                     y=[target, target],
                     mode='lines',
                     line=dict(dash='dash', color=proj_color, width=1),
@@ -630,7 +635,7 @@ class StockPlotter:
                     hoverinfo='name+y'
                 ), row=row, col=1)
                 fig.add_annotation(
-                    x=last_date,
+                    x=extended_date_str,
                     y=target,
                     text=f'W5 {ext*100:.1f}% W4',
                     showarrow=False,
@@ -734,7 +739,9 @@ class StockPlotter:
 
     def create_stock_plot(self, ticker, period, chart_mode='fib', manual_fib=False,
                           show_extensions=False, fib_high=None, moving_averages=None,
-                          show_fib=False, include_financials=True, elliott_points=None):
+                          show_fib=False, include_financials=True, elliott_points=None,
+                          show_elliott_auto_waves=False, show_rsi=False, show_macd=False, 
+                          elliott_fib_levels=None):
         """
         Create a complete stock plot with price data and optional indicators.
 
@@ -764,13 +771,30 @@ class StockPlotter:
         if df.empty:
             raise ValueError(f"No data found for ticker: {ticker}")
 
-        # Create subplots
+        # Create dynamic subplots based on indicators
+        subplot_count = 1
+        subplot_titles = ['Stock Price with Indicators']
+        row_heights = [1.0]
+        
+        if show_rsi:
+            subplot_count += 1
+            subplot_titles.append('Relative Strength Index (RSI)')
+            row_heights = [0.6, 0.2] if subplot_count == 2 else [0.5, 0.25, 0.25]
+            
+        if show_macd:
+            subplot_count += 1
+            subplot_titles.append('MACD')
+            if subplot_count == 2:
+                row_heights = [0.6, 0.4]
+            else:
+                row_heights = [0.5, 0.25, 0.25]
+
         fig = sp.make_subplots(
-            rows=3, cols=1,
+            rows=subplot_count, cols=1,
             shared_xaxes=True,
             vertical_spacing=0.05,
-            row_heights=[0.6, 0.2, 0.2],
-            subplot_titles=['Stock Price with Indicators', 'Relative Strength Index (RSI)', 'MACD']
+            row_heights=row_heights,
+            subplot_titles=subplot_titles
         )
 
         # Convert index to datetime if needed
@@ -802,74 +826,131 @@ class StockPlotter:
                 fib_high_val = df['Close'].max()
             self.add_fibonacci_lines(fig, x_dates, fib_high_val, fib_low_val, show_extensions, row=1, col=1)
 
-        # ADD: User-Defined Elliott Wave Projections - Add auto waves if no user points, else user projections
+        # ADD: User-Defined Elliott Wave Projections - Add auto waves only if enabled, user projections if provided
         if elliott_points:
-            self.add_user_elliott_waves(fig, x_dates, elliott_points, row=1, col=1)
-        else:
+            # Get Elliott Wave enhancement settings from frontend
+            show_fib_levels = elliott_fib_levels is not None and elliott_fib_levels.get('show_fib_levels', False)
+            extend_projections = elliott_fib_levels is None or elliott_fib_levels.get('extend_projections', True)
+            
+            self.add_user_elliott_waves(fig, x_dates, elliott_points, row=1, col=1, 
+                                      show_fib_levels=show_fib_levels, 
+                                      extend_projections=extend_projections)
+        elif show_elliott_auto_waves:
+            # Only show auto-generated Elliott waves if the user has enabled the toggle
             self.add_auto_elliott_waves(fig, df, df['Close'], x_dates, row=1, col=1)
 
-        # Add RSI subplot
-        rsi = self.calculate_rsi(df['Close'])
-        fig.add_trace(go.Scatter(
-            x=x_dates,
-            y=rsi.tolist(),
-            mode='lines',
-            name='RSI',
-            line=dict(color='purple')
-        ), row=2, col=1)
-        fig.add_hline(y=70, line_dash="dash", line_color="red", row=2, col=1)
-        fig.add_hline(y=30, line_dash="dash", line_color="green", row=2, col=1)
+        # Add RSI subplot if requested
+        current_row = 1
+        if show_rsi:
+            current_row += 1
+            rsi = self.calculate_rsi(df['Close'])
+            fig.add_trace(go.Scatter(
+                x=x_dates,
+                y=rsi.tolist(),
+                mode='lines',
+                name='RSI',
+                line=dict(color='#9C27B0', width=2)
+            ), row=current_row, col=1)
+            
+            # Add RSI overbought/oversold lines
+            fig.add_hline(y=70, line_dash="dash", line_color="red", 
+                         annotation_text="Overbought (70)", row=current_row, col=1)
+            fig.add_hline(y=30, line_dash="dash", line_color="green", 
+                         annotation_text="Oversold (30)", row=current_row, col=1)
 
-        # Add MACD subplot
-        macd_line, signal_line, histogram = self.calculate_macd(df['Close'])
-        fig.add_trace(go.Scatter(
-            x=x_dates,
-            y=macd_line.tolist(),
-            mode='lines',
-            name='MACD',
-            line=dict(color='blue')
-        ), row=3, col=1)
-        fig.add_trace(go.Scatter(
-            x=x_dates,
-            y=signal_line.tolist(),
-            mode='lines',
-            name='Signal Line',
-            line=dict(color='red')
-        ), row=3, col=1)
-        colors = ['green' if val >= 0 else 'red' for val in histogram]
-        fig.add_trace(go.Bar(
-            x=x_dates,
-            y=histogram.tolist(),
-            name='Histogram',
-            marker_color=colors
-        ), row=3, col=1)
+        # Add MACD subplot if requested
+        if show_macd:
+            current_row += 1
+            macd_line, signal_line, histogram = self.calculate_macd(df['Close'])
+            
+            # MACD Line
+            fig.add_trace(go.Scatter(
+                x=x_dates,
+                y=macd_line.tolist(),
+                mode='lines',
+                name='MACD',
+                line=dict(color='#2196F3', width=2)
+            ), row=current_row, col=1)
+            
+            # Signal Line
+            fig.add_trace(go.Scatter(
+                x=x_dates,
+                y=signal_line.tolist(),
+                mode='lines',
+                name='Signal Line',
+                line=dict(color='#FF5722', width=2)
+            ), row=current_row, col=1)
+            
+            # Histogram
+            colors = ['#4CAF50' if val >= 0 else '#F44336' for val in histogram]
+            fig.add_trace(go.Bar(
+                x=x_dates,
+                y=histogram.tolist(),
+                name='Histogram',
+                marker_color=colors,
+                opacity=0.7
+            ), row=current_row, col=1)
+            
+            # Add zero line
+            fig.add_hline(y=0, line_dash="solid", line_color="gray", 
+                         line_width=1, row=current_row, col=1)
 
-        # Update layout
+        # Update layout with modern styling
         period_name = {
             "1M": "Past Month",
-            "3M": "Past 3 Months",
+            "3M": "Past 3 Months", 
             "6M": "Past 6 Months",
             "1Y": "Past Year",
             "5Y": "Past 5 Years"
         }.get(period, "Past Year")
 
+        # Calculate dynamic height based on subplots
+        base_height = 600
+        subplot_height = 200
+        total_height = base_height + (subplot_count - 1) * subplot_height
+
         fig.update_layout(
-            title=f"{ticker} Stock Price - {period_name}",
-            height=800,
+            title=dict(
+                text=f"{ticker} Stock Price - {period_name}",
+                font=dict(size=24, color='#2E3440'),
+                x=0.5,
+                xanchor='center'
+            ),
+            height=total_height,
             showlegend=True,
             legend=dict(
                 orientation="h",
-                yanchor="bottom",
+                yanchor="bottom", 
                 y=1.02,
                 xanchor="right",
-                x=1
+                x=1,
+                bgcolor="rgba(255,255,255,0.8)",
+                bordercolor="rgba(0,0,0,0.2)",
+                borderwidth=1
             ),
-            xaxis3_title="Date",
-            yaxis_title="Price (USD)",
-            yaxis2_title="RSI",
-            yaxis3_title="MACD",
-            template="plotly_white"
+            template="plotly_white",
+            plot_bgcolor='rgba(248,249,250,0.8)',
+            paper_bgcolor='white',
+            font=dict(family="Inter, -apple-system, BlinkMacSystemFont, sans-serif", size=12),
+            margin=dict(l=60, r=60, t=80, b=60)
         )
+
+        # Update axis titles dynamically
+        fig.update_xaxes(title_text="Date", row=subplot_count, col=1)
+        fig.update_yaxes(title_text="Price (USD)", row=1, col=1)
+        
+        current_row = 1
+        if show_rsi:
+            current_row += 1
+            fig.update_yaxes(title_text="RSI", row=current_row, col=1)
+            
+        if show_macd:
+            current_row += 1
+            fig.update_yaxes(title_text="MACD", row=current_row, col=1)
+
+        # Improve grid and styling
+        fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='rgba(128,128,128,0.2)')
+        fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='rgba(128,128,128,0.2)')
 
         # Get financial data
         if include_financials:

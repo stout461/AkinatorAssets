@@ -53,7 +53,7 @@ def scheduled_watchlist_run():
 def load_watchlist_cache():
     """Load cached watchlist data."""
     try:
-        cache_path = os.path.join(os.getcwd(), 'watchlist_cache.json')
+        cache_path = os.path.join(os.path.dirname(__file__), 'watchlist_cache.json')
         if os.path.exists(cache_path):
             df = pd.read_json(cache_path, orient='records')
             table_data = df.drop(columns=['last_updated'], errors='ignore').to_dict(orient='records')
@@ -342,6 +342,20 @@ def index():
     return render_template('index.html', table_data=table_data, columns=columns, last_updated=last_updated)
 
 
+@app.route('/chart-preview')
+def chart_preview():
+    """Preview the chart component (temporary route for development)"""
+    return render_template('chart_preview.html')
+
+
+@app.route('/detailed-graph/<ticker>')
+@requires_auth
+def detailed_graph(ticker):
+    """Detailed graph page for full-screen chart view"""
+    period = request.args.get('period', '1Y')
+    return render_template('detailed_graph.html', ticker=ticker, period=period)
+
+
 @app.route('/run_watchlist', methods=['POST'])
 @requires_auth
 def run_watchlist():
@@ -350,7 +364,7 @@ def run_watchlist():
         df = main(return_dataframe=True)
 
         # Cache DataFrame for reuse
-        cache_path = os.path.join(os.getcwd(), 'watchlist_cache.json')
+        cache_path = os.path.join(os.path.dirname(__file__), 'watchlist_cache.json')
         df.to_json(cache_path, orient='records')
 
         table_data = df.to_dict(orient='records')
@@ -400,6 +414,23 @@ def plot():
         elliott_points_str = request.form.get('elliott_points', '')
         elliott_points = json.loads(elliott_points_str) if elliott_points_str else None
 
+        # Elliott Wave Auto-generation toggle
+        show_elliott_auto_waves = request.form.get('show_elliott_auto_waves', 'false') == 'true'
+
+        # NEW: RSI and MACD toggles
+        show_rsi = request.form.get('showRSI', 'false') == 'true'
+        show_macd = request.form.get('showMACD', 'false') == 'true'
+
+        # Elliott Wave enhancement settings
+        elliott_fib_levels = None
+        if chart_mode == 'elliott':
+            show_elliott_fib = request.form.get('show_elliott_fib_levels', 'false') == 'true'
+            extend_projections = request.form.get('extend_elliott_projections', 'true') == 'true'
+            elliott_fib_levels = {
+                'show_fib_levels': show_elliott_fib,
+                'extend_projections': extend_projections
+            }
+
         # Use StockPlotter to create the plot
         result = stock_plotter.create_stock_plot(
             ticker=ticker,
@@ -411,7 +442,11 @@ def plot():
             moving_averages=moving_averages,
             show_fib=show_fib,
             include_financials=include_financials,  # Pass new param
-            elliott_points=elliott_points  # Pass Elliott points
+            elliott_points=elliott_points,  # Pass Elliott points
+            show_elliott_auto_waves=show_elliott_auto_waves,  # Pass Elliott auto-waves toggle
+            show_rsi=show_rsi,  # Pass RSI toggle
+            show_macd=show_macd,  # Pass MACD toggle
+            elliott_fib_levels=elliott_fib_levels  # Pass Elliott Wave enhancements
         )
 
         # Convert figure to JSON

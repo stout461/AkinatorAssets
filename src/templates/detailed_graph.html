@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Detailed Graph - {{ ticker }} | Akinator Assets</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/chart.css') }}">
+</head>
+
+<body>
+    <div class="container-fluid">
+        <!-- Header with Navigation -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="d-flex align-items-center gap-3">
+                <a href="/" class="btn btn-outline-secondary">
+                    <i class="fa fa-arrow-left"></i> Back to Dashboard
+                </a>
+                <h2 class="mb-0">{{ ticker }} - Detailed Chart View</h2>
+            </div>
+            {% if session.get("user") %}
+            <div class="d-flex align-items-center gap-2">
+                <span class="text-muted">👋 {{ session["user"]["name"] or session["user"]["email"] }}</span>
+                <a href="/logout" class="btn btn-outline-danger btn-sm">Logout</a>
+            </div>
+            {% else %}
+            <a href="/login" class="btn btn-primary btn-sm">Login</a>
+            {% endif %}
+        </div>
+
+        <!-- Ticker and Period Controls -->
+        <div class="card-panel mb-3">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <input type="text" id="ticker" class="form-control" placeholder="Enter Stock Ticker"
+                            value="{{ ticker }}">
+                        <button id="update-chart" class="btn btn-primary">Update Chart</button>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="btn-group w-100" role="group">
+                        <input type="radio" class="btn-check" name="period" id="period1M" value="1M" autocomplete="off"
+                            {% if period=='1M' %}checked{% endif %}>
+                        <label class="btn btn-outline-secondary" for="period1M">1M</label>
+
+                        <input type="radio" class="btn-check" name="period" id="period3M" value="3M" autocomplete="off"
+                            {% if period=='3M' %}checked{% endif %}>
+                        <label class="btn btn-outline-secondary" for="period3M">3M</label>
+
+                        <input type="radio" class="btn-check" name="period" id="period6M" value="6M" autocomplete="off"
+                            {% if period=='6M' %}checked{% endif %}>
+                        <label class="btn btn-outline-secondary" for="period6M">6M</label>
+
+                        <input type="radio" class="btn-check" name="period" id="period1Y" value="1Y" autocomplete="off"
+                            {% if period=='1Y' or not period %}checked{% endif %}>
+                        <label class="btn btn-outline-secondary" for="period1Y">1Y</label>
+
+                        <input type="radio" class="btn-check" name="period" id="period5Y" value="5Y" autocomplete="off"
+                            {% if period=='5Y' %}checked{% endif %}>
+                        <label class="btn btn-outline-secondary" for="period5Y">5Y</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Detailed Chart Component -->
+        {% set chart_mode = 'detailed' %}
+        {% set chart_id = 'detailed-graph' %}
+        {% set show_controls = true %}
+        {% include 'components/stock_chart.html' %}
+
+        <!-- Loading & Error States -->
+        <div id="loading" class="text-center" style="display:none;">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p>Fetching stock data...</p>
+        </div>
+        <div id="error" class="alert alert-danger" style="display:none;"></div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/chart.js') }}"></script>
+
+    <!-- Detailed Chart Integration Script -->
+    <script>
+        $(document).ready(function () {
+            // Initialize the detailed chart
+            window.detailedChart = new StockChart('detailed-graph', 'detailed');
+
+            // Override navigation method for detailed view
+            window.detailedChart.navigateToDashboard = function () {
+                window.location.href = '/';
+            };
+
+            // Auto-load chart data on page load
+            const ticker = $('#ticker').val().trim();
+            if (ticker) {
+                window.detailedChart.loadChartData(true);
+            }
+
+            // Update chart when ticker or period changes
+            $('#update-chart').click(function () {
+                const newTicker = $('#ticker').val().trim();
+                const newPeriod = $('input[name="period"]:checked').val();
+
+                if (newTicker) {
+                    // Update URL without page reload
+                    const newUrl = `/detailed-graph/${newTicker}?period=${newPeriod}`;
+                    window.history.pushState({}, '', newUrl);
+
+                    // Load new chart data
+                    window.detailedChart.loadChartData(true);
+                } else {
+                    alert('Please enter a valid ticker symbol');
+                }
+            });
+
+            // Update chart when period changes
+            $('input[name="period"]').change(function () {
+                $('#update-chart').click();
+            });
+
+            // Keyboard shortcuts
+            $(document).keydown(function (e) {
+                // Escape key to return to dashboard
+                if (e.key === 'Escape') {
+                    window.location.href = '/';
+                }
+                // F key for Fibonacci mode
+                else if (e.key === 'f' || e.key === 'F') {
+                    window.detailedChart.setChartMode('fib');
+                }
+                // T key for Trendlines mode
+                else if (e.key === 't' || e.key === 'T') {
+                    window.detailedChart.setChartMode('trendlines');
+                }
+                // E key for Elliott mode
+                else if (e.key === 'e' || e.key === 'E') {
+                    window.detailedChart.setChartMode('elliott');
+                }
+                // S key to toggle settings
+                else if (e.key === 's' || e.key === 'S') {
+                    window.detailedChart.toggleSettings();
+                }
+            });
+
+            console.log('✅ Detailed chart page initialized');
+        });
+    </script>
+</body>
+
+</html>

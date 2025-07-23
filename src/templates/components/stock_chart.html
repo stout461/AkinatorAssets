@@ -1,0 +1,317 @@
+<!-- Stock Chart Component -->
+<!-- Parameters: chart_mode ('compact'|'detailed'), chart_id (default: 'graph'), show_controls (default: true) -->
+
+{% set chart_mode = chart_mode or 'compact' %}
+{% set chart_id = chart_id or 'graph' %}
+{% set show_controls = show_controls if show_controls is not none else true %}
+
+<div class="card-panel {% if chart_mode == 'detailed' %}detailed-chart-container{% endif %}">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0">📈 Stock Chart</h5>
+        <div class="d-flex align-items-center gap-2">
+            {% if show_controls %}
+                <button id="chart-settings-toggle" class="btn btn-sm btn-outline-secondary">Settings</button>
+                {% if chart_mode == 'compact' %}
+                    <button id="detailed-graph-btn" class="btn btn-sm btn-primary" title="Open detailed graph view">
+                        <i class="fa fa-expand"></i> Detailed Graph
+                    </button>
+                {% endif %}
+                {% if chart_mode == 'detailed' %}
+                    <button id="back-to-dashboard-btn" class="btn btn-sm btn-secondary" title="Return to dashboard">
+                        <i class="fa fa-arrow-left"></i> Back to Dashboard
+                    </button>
+                {% endif %}
+            {% endif %}
+        </div>
+    </div>
+
+    {% if show_controls %}
+    <div id="chart-settings" style="display: none; margin-bottom: 15px; position: relative; z-index: 1000;">
+        <!-- Unified Mode-Based Settings Layout -->
+        <div class="settings-single-row">
+            
+            <!-- Analysis Modes Selector -->
+            <div class="settings-section modes-section">
+                <div class="section-header">
+                    <i class="fas fa-sliders-h"></i>
+                    <span>Analysis Modes</span>
+                </div>
+                <div class="section-content">
+                    <div class="mode-tabs">
+                        <input type="radio" name="analysisMode" id="fibMode" value="fib" checked>
+                        <label for="fibMode" class="mode-tab">
+                            <i class="fas fa-wave-square"></i>
+                            <span>Fibonacci</span>
+                        </label>
+                        
+                        <input type="radio" name="analysisMode" id="trendlinesMode" value="trendlines">
+                        <label for="trendlinesMode" class="mode-tab">
+                            <i class="fas fa-chart-line"></i>
+                            <span>Trendlines</span>
+                        </label>
+                        
+                        <input type="radio" name="analysisMode" id="elliottMode" value="elliott">
+                        <label for="elliottMode" class="mode-tab">
+                            <i class="fas fa-water"></i>
+                            <span>Elliott</span>
+                        </label>
+                        
+                        <input type="radio" name="analysisMode" id="rsiMode" value="rsi">
+                        <label for="rsiMode" class="mode-tab mode-indicator">
+                            <i class="fas fa-chart-bar"></i>
+                            <span>RSI</span>
+                        </label>
+                        
+                        <input type="radio" name="analysisMode" id="macdMode" value="macd">
+                        <label for="macdMode" class="mode-tab mode-indicator">
+                            <i class="fas fa-signal"></i>
+                            <span>MACD</span>
+                        </label>
+                        
+                        <input type="radio" name="analysisMode" id="maMode" value="ma">
+                        <label for="maMode" class="mode-tab">
+                            <i class="fas fa-chart-area"></i>
+                            <span>Moving Avg</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mode-Specific Settings -->
+            <div class="settings-section mode-specific">
+                <!-- Fibonacci Settings -->
+                <div id="fibSettings" class="mode-content active">
+                    <div class="section-header">
+                        <i class="fas fa-wave-square"></i>
+                        <span>Fibonacci Settings</span>
+                    </div>
+                    <div class="section-content">
+                        <div class="inline-controls">
+                            <label class="compact-toggle">
+                                <input type="checkbox" id="showFib">
+                                <span class="toggle-slider-mini"></span>
+                                <span class="toggle-text">Show Levels</span>
+                            </label>
+                            <label class="compact-toggle">
+                                <input type="checkbox" id="manualFibMode">
+                                <span class="toggle-slider-mini"></span>
+                                <span class="toggle-text">Manual High</span>
+                            </label>
+                            <label class="compact-toggle">
+                                <input type="checkbox" id="showExtensions">
+                                <span class="toggle-slider-mini"></span>
+                                <span class="toggle-text">Extensions</span>
+                            </label>
+                            <input type="number" class="compact-input" id="fibHighValue" placeholder="High Value">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Trendline Settings -->
+                <div id="trendLineSettings" class="mode-content">
+                    <div class="section-header">
+                        <i class="fas fa-chart-line"></i>
+                        <span>Trendline Settings</span>
+                    </div>
+                    <div class="section-content">
+                        <select class="compact-select" id="trendLineMode">
+                            <option value="off">Disabled</option>
+                            <option value="horizontal">Horizontal Lines</option>
+                            <option value="point">Point-to-Point</option>
+                        </select>
+                        <small class="mode-help">Click chart to draw trendlines</small>
+                    </div>
+                </div>
+
+                <!-- Elliott Settings -->
+                <div id="elliott-settings" class="mode-content">
+                    <div class="section-header">
+                        <i class="fas fa-water"></i>
+                        <span>Elliott Wave Settings</span>
+                    </div>
+                    <div class="section-content">
+                        <div class="inline-controls">
+                            <label class="compact-toggle">
+                                <input type="checkbox" id="show-elliott-auto-waves">
+                                <span class="toggle-slider-mini"></span>
+                                <span class="toggle-text">Auto Waves</span>
+                            </label>
+                            <button id="clear-elliott-points" class="compact-btn">
+                                <i class="fas fa-trash"></i> Clear Points
+                            </button>
+                            <label class="compact-toggle">
+                                <input type="checkbox" id="show-elliott-fib-levels">
+                                <span class="toggle-slider-mini"></span>
+                                <span class="toggle-text">Fib Levels</span>
+                            </label>
+                            <label class="compact-toggle">
+                                <input type="checkbox" id="extend-elliott-projections" checked>
+                                <span class="toggle-slider-mini"></span>
+                                <span class="toggle-text">Projections</span>
+                            </label>
+                            <div class="elliott-points-display">
+                                <div class="points-header">
+                                    <span class="points-count">Points: <span id="elliott-points-count">0</span></span>
+                                    <small class="points-help">Click chart to add</small>
+                                </div>
+                                <div class="points-grid" id="elliott-points-grid"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RSI Settings -->
+                <div id="rsiSettings" class="mode-content">
+                    <div class="section-header">
+                        <i class="fas fa-chart-bar"></i>
+                        <span>RSI Settings</span>
+                    </div>
+                    <div class="section-content">
+                        <div class="inline-controls">
+                            <label class="compact-toggle">
+                                <input type="checkbox" id="showRSI">
+                                <span class="toggle-slider-mini"></span>
+                                <span class="toggle-text">Show RSI</span>
+                            </label>
+                            <div class="setting-info">
+                                <span class="info-text">RSI (Relative Strength Index)</span>
+                                <small class="mode-help">Momentum oscillator (0-100)</small>
+                            </div>
+                            <div class="rsi-levels">
+                                <span class="level-indicator overbought">Overbought: 70+</span>
+                                <span class="level-indicator oversold">Oversold: 30-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MACD Settings -->
+                <div id="macdSettings" class="mode-content">
+                    <div class="section-header">
+                        <i class="fas fa-signal"></i>
+                        <span>MACD Settings</span>
+                    </div>
+                    <div class="section-content">
+                        <div class="inline-controls">
+                            <label class="compact-toggle">
+                                <input type="checkbox" id="showMACD">
+                                <span class="toggle-slider-mini"></span>
+                                <span class="toggle-text">Show MACD</span>
+                            </label>
+                            <div class="setting-info">
+                                <span class="info-text">MACD (Moving Average Convergence Divergence)</span>
+                                <small class="mode-help">Trend-following momentum indicator</small>
+                            </div>
+                            <div class="macd-components">
+                                <span class="component-indicator macd-line">MACD Line</span>
+                                <span class="component-indicator signal-line">Signal Line</span>
+                                <span class="component-indicator histogram">Histogram</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Moving Averages Settings -->
+                <div id="maSettings" class="mode-content">
+                    <div class="section-header">
+                        <i class="fas fa-chart-area"></i>
+                        <span>Moving Averages</span>
+                    </div>
+                    <div class="section-content">
+                        <div class="ma-presets-mini">
+                            <button id="ma-preset-none" class="preset-btn-mini">None</button>
+                            <button id="ma-preset-basic" class="preset-btn-mini">Basic</button>
+                            <button id="ma-preset-extended" class="preset-btn-mini">Extended</button>
+                            <button id="ma-preset-day-trading" class="preset-btn-mini">Day Trading</button>
+                        </div>
+                        <div class="ma-toggles-mini">
+                            <label class="ma-toggle-mini" data-color="#FF6B6B">
+                                <input class="ma-checkbox" type="checkbox" value="5" id="ma-5">
+                                <span class="ma-dot"></span>
+                                <span>5</span>
+                            </label>
+                            <label class="ma-toggle-mini" data-color="#4ECDC4">
+                                <input class="ma-checkbox" type="checkbox" value="10" id="ma-10">
+                                <span class="ma-dot"></span>
+                                <span>10</span>
+                            </label>
+                            <label class="ma-toggle-mini" data-color="#45B7D1">
+                                <input class="ma-checkbox" type="checkbox" value="20" id="ma-20">
+                                <span class="ma-dot"></span>
+                                <span>20</span>
+                            </label>
+                            <label class="ma-toggle-mini" data-color="#96CEB4">
+                                <input class="ma-checkbox" type="checkbox" value="50" id="ma-50">
+                                <span class="ma-dot"></span>
+                                <span>50</span>
+                            </label>
+                            <label class="ma-toggle-mini" data-color="#FFEAA7">
+                                <input class="ma-checkbox" type="checkbox" value="100" id="ma-100">
+                                <span class="ma-dot"></span>
+                                <span>100</span>
+                            </label>
+                            <label class="ma-toggle-mini" data-color="#DDA0DD">
+                                <input class="ma-checkbox" type="checkbox" value="200" id="ma-200">
+                                <span class="ma-dot"></span>
+                                <span>200</span>
+                            </label>
+                        </div>
+                        <div class="custom-ma-mini">
+                            <input type="number" class="compact-input" id="custom-ma-input" placeholder="Custom Period" min="1" max="500">
+                            <button class="compact-btn" type="button" id="add-custom-ma">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                            <div id="custom-ma-display" class="custom-ma-tags-mini"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Chart Loading Indicator -->
+    <div id="chart-loading" class="text-center" style="display: none;">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="mt-2">Fetching stock data...</p>
+    </div>
+
+    <!-- Chart Container -->
+    <div id="{{ chart_id }}" class="chart-container {% if chart_mode == 'detailed' %}detailed-chart{% endif %}"></div>
+
+    <!-- Chart Error Display -->
+    <div id="chart-error" class="alert alert-danger" style="display: none;"></div>
+</div>
+
+<!-- Chart-specific styles -->
+<style>
+.detailed-chart-container {
+    min-height: 80vh;
+}
+
+.detailed-chart {
+    height: 75vh !important;
+    min-height: 600px;
+}
+
+.chart-container {
+    min-height: 400px;
+}
+
+{% if chart_mode == 'compact' %}
+.chart-container {
+    min-height: 500px;
+    height: auto;
+}
+{% endif %}
+
+.settings-section {
+    padding: 15px;
+}
+
+.text-purple {
+    color: #6f42c1 !important;
+}
+</style>

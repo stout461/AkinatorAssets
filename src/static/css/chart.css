@@ -1,0 +1,1257 @@
+/**
+ * Chart-Specific CSS Styles
+ * Handles styling for both compact and detailed chart modes
+ * Maintains consistency with existing design system
+ */
+
+/* ========================================
+   CHART CONTAINER STYLES
+   ======================================== */
+
+.chart-container {
+    width: 100%;
+    min-height: 400px;
+    position: relative;
+    background-color: #ffffff;
+    border-radius: 8px;
+    overflow: visible; /* Allow content to be visible */
+}
+
+/* Compact mode (dashboard) */
+.chart-container.compact-chart {
+    min-height: 600px;
+    max-height: none;
+    height: auto; /* Allow dynamic height based on content */
+}
+
+/* Detailed mode (full screen) */
+.chart-container.detailed-chart {
+    height: 75vh !important;
+    min-height: 600px;
+    max-height: 90vh;
+}
+
+.detailed-chart-container {
+    min-height: 80vh;
+    margin: 0;
+    padding: 20px;
+}
+
+.detailed-chart-container .card-panel {
+    min-height: calc(100vh - 100px);
+    display: flex;
+    flex-direction: column;
+}
+
+.detailed-chart-container .chart-container {
+    flex: 1;
+    margin-top: 10px;
+    min-height: 500px;
+}
+
+/* ========================================
+   CHART HEADER AND CONTROLS
+   ======================================== */
+
+.chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.chart-title {
+    color: #0ac775;
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+.chart-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Settings toggle button styling */
+#chart-settings-toggle {
+    background-color: #6c757d;
+    border-color: #6c757d;
+    color: white;
+    padding: 6px 12px;
+    font-size: 0.875rem;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+#chart-settings-toggle:hover {
+    background-color: #5a6268;
+    border-color: #545b62;
+    transform: translateY(-1px);
+}
+
+.chart-nav-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 12px;
+    font-size: 0.875rem;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.chart-nav-btn.detailed-btn {
+    background-color: #0ac775;
+    border-color: #0ac775;
+    color: white;
+}
+
+.chart-nav-btn.detailed-btn:hover {
+    background-color: #0cbf72;
+    border-color: #0cbf72;
+    transform: translateY(-1px);
+}
+
+.chart-nav-btn.back-btn {
+    background-color: #6c757d;
+    border-color: #6c757d;
+    color: white;
+}
+
+.chart-nav-btn.back-btn:hover {
+    background-color: #5a6268;
+    border-color: #545b62;
+}
+
+/* ========================================
+   MODERN CHART SETTINGS PANEL
+   ======================================== */
+
+#chart-settings {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border: 1px solid #dee2e6;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+    transition: all 0.3s ease;
+    overflow: visible;
+    z-index: 1000;
+    position: relative;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Single-Row Compact Settings Layout */
+.settings-single-row {
+    display: flex;
+    gap: 12px;
+    align-items: stretch;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 4px;
+}
+
+/* Settings Sections */
+.settings-section {
+    background: white;
+    border: 1px solid #e1e5e9;
+    border-radius: 8px;
+    min-width: 140px;
+    flex-shrink: 0;
+    transition: all 0.2s ease;
+}
+
+.settings-section:hover {
+    border-color: #0ac775;
+    box-shadow: 0 2px 6px rgba(10, 199, 117, 0.1);
+}
+
+/* Mode-specific section is wider */
+.settings-section.mode-specific {
+    min-width: 200px;
+}
+
+.settings-section.modes-section {
+    min-width: 320px;
+}
+
+/* Section Headers */
+.section-header {
+    background: linear-gradient(135deg, #0ac775 0%, #0cbf72 100%);
+    color: white;
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+    font-size: 0.8rem;
+}
+
+.section-header i {
+    font-size: 0.9rem;
+}
+
+/* Section Content */
+.section-content {
+    padding: 12px;
+}
+
+/* Mode Content Switching */
+.mode-content {
+    display: none;
+}
+
+.mode-content.active {
+    display: block;
+}
+
+/* ========================================
+   COMPACT SINGLE-ROW COMPONENTS
+   ======================================== */
+
+/* Compact Toggle Switches */
+.compact-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 6px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.compact-toggle input[type="checkbox"] {
+    display: none;
+}
+
+.toggle-slider-mini {
+    position: relative;
+    width: 32px;
+    height: 18px;
+    background-color: #ccc;
+    border-radius: 18px;
+    transition: background-color 0.3s ease;
+}
+
+.toggle-slider-mini:before {
+    content: "";
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background-color: white;
+    top: 2px;
+    left: 2px;
+    transition: transform 0.3s ease;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+.compact-toggle input:checked + .toggle-slider-mini {
+    background-color: #0ac775;
+}
+
+.compact-toggle input:checked + .toggle-slider-mini:before {
+    transform: translateX(14px);
+}
+
+.toggle-text {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #495057;
+}
+
+/* Mode Tabs */
+.mode-tabs {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.mode-tabs input[type="radio"] {
+    display: none;
+}
+
+.mode-tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 10px 12px;
+    border: 1px solid #e1e5e9;
+    border-radius: 6px;
+    background: white;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 65px;
+    text-align: center;
+    font-size: 0.75rem;
+}
+
+.mode-tab:hover {
+    border-color: #0ac775;
+    background-color: rgba(10, 199, 117, 0.05);
+}
+
+.mode-tabs input:checked + .mode-tab {
+    border-color: #0ac775;
+    background-color: rgba(10, 199, 117, 0.1);
+    color: #0ac775;
+}
+
+.mode-tab i {
+    font-size: 0.9rem;
+}
+
+/* Inline Controls */
+.inline-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+/* Compact Inputs */
+.compact-input {
+    width: 100%;
+    max-width: 80px;
+    padding: 4px 6px;
+    font-size: 0.75rem;
+    border: 1px solid #ced4da;
+    border-radius: 3px;
+    margin-top: 4px;
+    transition: all 0.3s ease;
+}
+
+/* Visual feedback for Fibonacci manual high input */
+.compact-input.highlight-input {
+    border-color: #0ac775;
+    background-color: rgba(10, 199, 117, 0.1);
+    box-shadow: 0 0 0 2px rgba(10, 199, 117, 0.2);
+}
+
+.compact-select {
+    width: 100%;
+    padding: 4px 6px;
+    font-size: 0.75rem;
+    border: 1px solid #ced4da;
+    border-radius: 3px;
+}
+
+.compact-btn {
+    padding: 4px 8px;
+    font-size: 0.7rem;
+    border: 1px solid #dee2e6;
+    border-radius: 3px;
+    background: white;
+    color: #495057;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.compact-btn:hover {
+    border-color: #0ac775;
+    background-color: rgba(10, 199, 117, 0.05);
+    color: #0ac775;
+}
+
+/* Mini MA Components */
+.ma-presets-mini {
+    display: flex;
+    gap: 3px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+}
+
+.preset-btn-mini {
+    padding: 3px 6px;
+    font-size: 0.7rem;
+    border: 1px solid #dee2e6;
+    border-radius: 3px;
+    background: white;
+    color: #495057;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.preset-btn-mini:hover {
+    border-color: #0ac775;
+    background-color: rgba(10, 199, 117, 0.05);
+    color: #0ac775;
+}
+
+.ma-toggles-mini {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+}
+
+.ma-toggle-mini {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    padding: 4px 6px;
+    border: 1px solid #e9ecef;
+    border-radius: 4px;
+    background: white;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.7rem;
+}
+
+.ma-toggle-mini:hover {
+    border-color: #0ac775;
+    background-color: rgba(10, 199, 117, 0.05);
+}
+
+.ma-toggle-mini input[type="checkbox"] {
+    display: none;
+}
+
+.ma-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #dee2e6;
+    transition: background-color 0.2s ease;
+}
+
+.ma-toggle-mini input:checked + .ma-dot {
+    background-color: var(--ma-color, #0ac775);
+}
+
+.ma-toggle-mini[data-color="#FF6B6B"] input:checked + .ma-dot { background-color: #FF6B6B; }
+.ma-toggle-mini[data-color="#4ECDC4"] input:checked + .ma-dot { background-color: #4ECDC4; }
+.ma-toggle-mini[data-color="#45B7D1"] input:checked + .ma-dot { background-color: #45B7D1; }
+.ma-toggle-mini[data-color="#96CEB4"] input:checked + .ma-dot { background-color: #96CEB4; }
+.ma-toggle-mini[data-color="#FFEAA7"] input:checked + .ma-dot { background-color: #FFEAA7; }
+.ma-toggle-mini[data-color="#DDA0DD"] input:checked + .ma-dot { background-color: #DDA0DD; }
+
+.ma-toggle-mini input:checked ~ span {
+    color: #0ac775;
+    font-weight: 600;
+}
+
+/* Custom MA Mini */
+.custom-ma-mini {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 6px;
+}
+
+.custom-ma-tags-mini {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    margin-left: 4px;
+}
+
+/* Elliott Points Display */
+.elliott-points-display {
+    margin-top: 8px;
+}
+
+.points-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.points-count {
+    font-size: 0.7rem;
+    color: #6c757d;
+    font-weight: 600;
+}
+
+.points-help {
+    font-size: 0.65rem;
+    color: #6c757d;
+    font-style: italic;
+}
+
+/* Grid layout for Elliott points - more space efficient */
+.points-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(50px, 1fr));
+    gap: 4px;
+    min-height: 32px;
+    max-height: 70px;
+    overflow-y: auto;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 6px;
+}
+
+.points-grid:empty::before {
+    content: "Click chart to add Elliott Wave points";
+    color: #6c757d;
+    font-style: italic;
+    font-size: 0.65rem;
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 8px 4px;
+}
+
+/* Individual point chips */
+.elliott-point-chip {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #ffffff;
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    padding: 4px 8px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: #495057;
+    position: relative;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    min-height: 24px;
+}
+
+.elliott-point-chip:hover {
+    background-color: #e9ecef;
+    border-color: #0ac775;
+    transform: translateY(-1px);
+}
+
+.elliott-point-chip .point-label {
+    color: #0ac775;
+    margin-right: 4px;
+}
+
+.elliott-point-chip .point-value {
+    color: #495057;
+    font-size: 0.6rem;
+}
+
+.elliott-point-chip .remove-point {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    width: 14px;
+    height: 14px;
+    background-color: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    font-size: 0.6rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.elliott-point-chip:hover .remove-point {
+    opacity: 1;
+}
+
+.elliott-point-chip .remove-point:hover {
+    background-color: #c82333;
+}
+
+/* ========================================
+   RSI AND MACD MODE INDICATORS
+   ======================================== */
+
+/* Special styling for indicator mode tabs */
+.mode-tab.mode-indicator {
+    position: relative;
+}
+
+.mode-tab.mode-indicator:hover {
+    border-color: #9C27B0;
+    background-color: rgba(156, 39, 176, 0.05);
+}
+
+.mode-tabs input:checked + .mode-tab.mode-indicator {
+    border-color: #9C27B0;
+    background-color: rgba(156, 39, 176, 0.1);
+    color: #9C27B0;
+}
+
+/* Active indicator styling - shows when RSI/MACD are enabled */
+.mode-tab.mode-indicator.indicator-active {
+    border-color: #FF6B35 !important;
+    background-color: rgba(255, 107, 53, 0.15) !important;
+    color: #FF6B35 !important;
+    box-shadow: 0 0 8px rgba(255, 107, 53, 0.3);
+}
+
+.mode-tab.mode-indicator.indicator-active::after {
+    content: "●";
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    width: 12px;
+    height: 12px;
+    background-color: #FF6B35;
+    color: white;
+    border-radius: 50%;
+    font-size: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: pulse-indicator 2s infinite;
+}
+
+@keyframes pulse-indicator {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.1); opacity: 0.8; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+/* RSI/MACD Settings Content */
+.setting-info {
+    margin-bottom: 8px;
+}
+
+.info-text {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #495057;
+    display: block;
+    margin-bottom: 2px;
+}
+
+.mode-help {
+    font-size: 0.65rem;
+    color: #6c757d;
+    font-style: italic;
+    display: block;
+}
+
+/* RSI Level Indicators */
+.rsi-levels {
+    display: flex;
+    gap: 8px;
+    margin-top: 6px;
+}
+
+.level-indicator {
+    font-size: 0.65rem;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-weight: 500;
+}
+
+.level-indicator.overbought {
+    background-color: rgba(220, 53, 69, 0.1);
+    color: #dc3545;
+    border: 1px solid rgba(220, 53, 69, 0.2);
+}
+
+.level-indicator.oversold {
+    background-color: rgba(40, 167, 69, 0.1);
+    color: #28a745;
+    border: 1px solid rgba(40, 167, 69, 0.2);
+}
+
+/* MACD Component Indicators */
+.macd-components {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 6px;
+}
+
+.component-indicator {
+    font-size: 0.65rem;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-weight: 500;
+}
+
+.component-indicator.macd-line {
+    background-color: rgba(33, 150, 243, 0.1);
+    color: #2196F3;
+    border: 1px solid rgba(33, 150, 243, 0.2);
+}
+
+.component-indicator.signal-line {
+    background-color: rgba(255, 87, 34, 0.1);
+    color: #FF5722;
+    border: 1px solid rgba(255, 87, 34, 0.2);
+}
+
+.component-indicator.histogram {
+    background-color: rgba(76, 175, 80, 0.1);
+    color: #4CAF50;
+    border: 1px solid rgba(76, 175, 80, 0.2);
+}
+
+/* ========================================
+   MODERN TOGGLE SWITCHES
+   ======================================== */
+
+.toggle-group {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.toggle-switch {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.toggle-switch input[type="checkbox"] {
+    display: none;
+}
+
+.toggle-slider {
+    position: relative;
+    width: 44px;
+    height: 24px;
+    background-color: #ccc;
+    border-radius: 24px;
+    transition: background-color 0.3s ease;
+}
+
+.toggle-slider:before {
+    content: "";
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background-color: white;
+    top: 2px;
+    left: 2px;
+    transition: transform 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.toggle-switch input:checked + .toggle-slider {
+    background-color: #0ac775;
+}
+
+.toggle-switch input:checked + .toggle-slider:before {
+    transform: translateX(20px);
+}
+
+.toggle-label {
+    font-weight: 500;
+    color: #495057;
+    font-size: 0.9rem;
+}
+
+/* ========================================
+   MODE SELECTOR (RADIO BUTTONS)
+   ======================================== */
+
+.mode-selector {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.mode-selector input[type="radio"] {
+    display: none;
+}
+
+.mode-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 12px 16px;
+    border: 2px solid #e1e5e9;
+    border-radius: 8px;
+    background: white;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 80px;
+    text-align: center;
+}
+
+.mode-btn:hover {
+    border-color: #0ac775;
+    background-color: rgba(10, 199, 117, 0.05);
+}
+
+.mode-selector input:checked + .mode-btn {
+    border-color: #0ac775;
+    background-color: rgba(10, 199, 117, 0.1);
+    color: #0ac775;
+}
+
+.mode-btn i {
+    font-size: 1.2rem;
+}
+
+.mode-btn span {
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+/* ========================================
+   FIBONACCI SETTINGS
+   ======================================== */
+
+.fib-settings-group {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.fib-input-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+#fibHighValue {
+    max-width: 120px;
+    font-size: 0.875rem;
+}
+
+.fib-help-text {
+    font-size: 0.75rem;
+    color: #6c757d;
+    font-style: italic;
+    margin-top: 5px;
+}
+
+/* ========================================
+   MODERN MOVING AVERAGES SECTION
+   ======================================== */
+
+/* Preset Buttons */
+.preset-buttons {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.preset-btn {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    background: white;
+    color: #495057;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.preset-btn:hover {
+    border-color: #0ac775;
+    background-color: rgba(10, 199, 117, 0.05);
+    color: #0ac775;
+}
+
+.preset-btn:active {
+    transform: translateY(1px);
+}
+
+/* MA Toggle Switches */
+.ma-toggles {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.ma-toggle {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 12px 8px;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    background: white;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.ma-toggle:hover {
+    border-color: #0ac775;
+    background-color: rgba(10, 199, 117, 0.05);
+}
+
+.ma-toggle input[type="checkbox"] {
+    display: none;
+}
+
+.ma-indicator {
+    width: 20px;
+    height: 3px;
+    border-radius: 2px;
+    background-color: #dee2e6;
+    transition: background-color 0.2s ease;
+}
+
+.ma-toggle input:checked + .ma-indicator {
+    background-color: var(--ma-color, #0ac775);
+}
+
+.ma-toggle[data-color="#FF6B6B"] input:checked + .ma-indicator { background-color: #FF6B6B; }
+.ma-toggle[data-color="#4ECDC4"] input:checked + .ma-indicator { background-color: #4ECDC4; }
+.ma-toggle[data-color="#45B7D1"] input:checked + .ma-indicator { background-color: #45B7D1; }
+.ma-toggle[data-color="#96CEB4"] input:checked + .ma-indicator { background-color: #96CEB4; }
+.ma-toggle[data-color="#FFEAA7"] input:checked + .ma-indicator { background-color: #FFEAA7; }
+.ma-toggle[data-color="#DDA0DD"] input:checked + .ma-indicator { background-color: #DDA0DD; }
+
+.ma-toggle span:last-child {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #495057;
+}
+
+.ma-toggle input:checked ~ span:last-child {
+    color: #0ac775;
+}
+
+/* Custom MA Section */
+.custom-ma-section {
+    border-top: 1px solid #e9ecef;
+    padding-top: 16px;
+    margin-top: 16px;
+}
+
+.custom-ma-tags {
+    margin-top: 8px;
+    min-height: 32px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    align-items: center;
+}
+
+.custom-ma-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background-color: #e9ecef;
+    border: 1px solid #ced4da;
+    border-radius: 16px;
+    padding: 4px 10px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #495057;
+}
+
+.remove-custom-ma {
+    cursor: pointer;
+    color: #dc3545;
+    font-weight: bold;
+    font-size: 0.9rem;
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background-color 0.2s ease;
+}
+
+.remove-custom-ma:hover {
+    background-color: rgba(220, 53, 69, 0.1);
+}
+
+/* Auto-refresh Section */
+.auto-refresh-section {
+    border-top: 1px solid #e9ecef;
+    padding-top: 16px;
+    margin-top: 16px;
+}
+
+/* ========================================
+   ELLIOTT WAVE SETTINGS
+   ======================================== */
+
+.elliott-points-container {
+    margin-bottom: 12px;
+}
+
+.points-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 12px 0;
+    max-height: 120px;
+    overflow-y: auto;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 8px;
+}
+
+.points-list:empty::before {
+    content: "Click on chart to add Elliott Wave points";
+    color: #6c757d;
+    font-style: italic;
+    font-size: 0.8rem;
+    display: block;
+    text-align: center;
+    padding: 16px;
+}
+
+.points-list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 10px;
+    margin-bottom: 4px;
+    background-color: #ffffff;
+    border: 1px solid #e9ecef;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    transition: all 0.2s ease;
+}
+
+.points-list li:hover {
+    background-color: #f8f9fa;
+    border-color: #0ac775;
+}
+
+.points-list li:last-child {
+    margin-bottom: 0;
+}
+
+.remove-elliott-point {
+    padding: 2px 6px;
+    font-size: 0.7rem;
+    border-radius: 3px;
+}
+
+#clear-elliott-points {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    font-size: 0.8rem;
+    border-radius: 6px;
+}
+
+.setting-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.input-group-compact {
+    margin-top: 8px;
+}
+
+.input-group-compact input {
+    max-width: 140px;
+}
+
+/* ========================================
+   CHART LOADING AND ERROR STATES
+   ======================================== */
+
+.chart-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 300px;
+    background-color: #f8f9fa;
+    border: 2px dashed #dee2e6;
+    border-radius: 8px;
+    color: #6c757d;
+}
+
+.chart-loading .spinner-border {
+    width: 3rem;
+    height: 3rem;
+    margin-bottom: 15px;
+    color: #0ac775;
+}
+
+.chart-loading p {
+    font-size: 1.1rem;
+    font-weight: 500;
+    margin: 0;
+}
+
+.chart-error {
+    padding: 20px;
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    border-radius: 8px;
+    color: #721c24;
+    text-align: center;
+}
+
+.chart-error h6 {
+    color: #721c24;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+/* ========================================
+   RESPONSIVE DESIGN
+   ======================================== */
+
+/* Tablet and smaller */
+@media (max-width: 768px) {
+    .detailed-chart-container {
+        min-height: 70vh;
+        padding: 15px;
+    }
+    
+    .chart-container.detailed-chart {
+        height: 60vh !important;
+        min-height: 400px;
+    }
+    
+    .chart-container.compact-chart {
+        min-height: 350px;
+        height: auto;
+    }
+    
+    #chart-settings {
+        padding: 15px;
+    }
+    
+    .settings-section {
+        padding: 12px;
+    }
+    
+    .ma-checkboxes {
+        gap: 10px;
+    }
+    
+    .chart-controls {
+        flex-direction: column;
+        gap: 8px;
+        align-items: stretch;
+    }
+    
+    .chart-nav-btn {
+        justify-content: center;
+    }
+}
+
+/* Mobile */
+@media (max-width: 576px) {
+    .detailed-chart-container {
+        padding: 10px;
+        min-height: 60vh;
+    }
+    
+    .chart-container.detailed-chart {
+        height: 50vh !important;
+        min-height: 300px;
+    }
+    
+    .chart-container.compact-chart {
+        min-height: 300px;
+        height: auto;
+    }
+    
+    .chart-title {
+        font-size: 1.1rem;
+    }
+    
+    .settings-section h6 {
+        font-size: 0.9rem;
+    }
+    
+    .ma-checkboxes {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .ma-preset-buttons {
+        flex-direction: column;
+        gap: 3px;
+    }
+    
+    .ma-preset-btn {
+        font-size: 0.7rem;
+        padding: 3px 6px;
+    }
+    
+    #elliott-points-list {
+        max-height: 100px;
+        font-size: 0.8rem;
+    }
+}
+
+/* ========================================
+   CHART INTERACTION ENHANCEMENTS
+   ======================================== */
+
+/* Hover effects for interactive elements */
+.chart-container:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transition: box-shadow 0.3s ease;
+}
+
+/* Settings toggle animation - Fixed for proper visibility */
+#chart-settings {
+    overflow: visible;
+    z-index: 1000;
+    position: relative;
+}
+
+/* Smooth transitions for mode changes */
+.settings-section > div {
+    transition: opacity 0.2s ease;
+}
+
+.settings-section > div[style*="display: none"] {
+    opacity: 0;
+}
+
+.settings-section > div[style*="display: block"] {
+    opacity: 1;
+}
+
+/* ========================================
+   ACCESSIBILITY IMPROVEMENTS
+   ======================================== */
+
+/* Focus indicators */
+.form-check-input:focus {
+    box-shadow: 0 0 0 0.2rem rgba(10, 199, 117, 0.25);
+}
+
+.chart-nav-btn:focus {
+    box-shadow: 0 0 0 0.2rem rgba(10, 199, 117, 0.25);
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .chart-container {
+        border: 2px solid #000;
+    }
+    
+    .settings-section {
+        border: 1px solid #000;
+    }
+    
+    .custom-ma-tag {
+        border: 1px solid #000;
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .chart-container,
+    .chart-nav-btn,
+    #chart-settings,
+    .settings-section > div {
+        transition: none;
+    }
+}

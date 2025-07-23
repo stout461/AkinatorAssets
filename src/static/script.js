@@ -642,8 +642,8 @@ function chartClickHandler(data) {
 // ========================================
 
 $(document).ready(function() {
-    // Watchlist table loading (unchanged)
-    if (cachedData && cachedCols) {
+    // Watchlist table loading with empty state handling
+    if (cachedData && cachedCols && cachedData.length > 0) {
         $('#watchlist-head').empty();
         $('#watchlist-body').empty();
 
@@ -683,6 +683,7 @@ $(document).ready(function() {
         });
 
         $('#watchlist-table-container').show();
+        $('#watchlist-empty-state').hide();
 
         if ($.fn.DataTable.isDataTable('#watchlist-table')) {
             $('#watchlist-table').DataTable().destroy();
@@ -691,6 +692,11 @@ $(document).ready(function() {
             pageLength: 25,
             lengthMenu: [10, 25, 50, 100]
         });
+    } else {
+        // Show empty state when no watchlist data is available
+        $('#watchlist-table-container').hide();
+        $('#watchlist-empty-state').show();
+        console.log('📊 No watchlist data available - showing empty state');
     }
 
     // Chart click mode change
@@ -848,10 +854,7 @@ $(document).ready(function() {
         });
     }
 
-    $('#chart-settings-toggle').click(function() {
-        $('#chart-settings').toggle();
-        $(this).text($('#chart-settings').is(':visible') ? 'Hide Settings' : 'Settings');
-    });
+    // Chart settings toggle is now handled by chart.js StockChart class
 
     $(document).on('click', '.remove-custom-ma', function() {
         const period = parseInt($(this).data('period'));

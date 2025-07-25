@@ -66,11 +66,23 @@ class StockPlotter:
         except (ValueError, TypeError):
             return "N/A"
 
-    def get_stock_data(self, symbol, start_date, end_date):
-        """Fetch historical data from yfinance."""
+    def get_stock_data(self, symbol, start_date, end_date, period=None):
+        """Fetch historical data from yfinance with appropriate interval based on period."""
         try:
             ticker = yf.Ticker(symbol)
-            df = ticker.history(start=start_date, end=end_date)
+            
+            # Determine the appropriate interval based on the period
+            interval = self.get_optimal_interval(period)
+            
+            # For intervals other than daily, we need to use period instead of start/end dates
+            if interval != '1d':
+                # Map our period to yfinance period format
+                yf_period = self.map_period_to_yfinance(period)
+                df = ticker.history(period=yf_period, interval=interval)
+            else:
+                # Use start/end dates for daily data
+                df = ticker.history(start=start_date, end=end_date, interval=interval)
+            
             if not df.empty and all(col in df.columns for col in ['Open', 'High', 'Low', 'Close', 'Volume']):
                 df = df[['Open', 'High', 'Low', 'Close', 'Volume']]
             df = df.dropna()
@@ -78,6 +90,32 @@ class StockPlotter:
         except Exception as e:
             print(f"Error getting data for {symbol}: {str(e)}")
             return pd.DataFrame()
+    
+    def get_optimal_interval(self, period):
+        """Determine the optimal candlestick interval based on the time period."""
+        if period == '1M':
+            return '1h'    # 1-hour candlesticks for 1 month
+        elif period == '3M':
+            return '4h'    # 4-hour candlesticks for 3 months
+        elif period == '6M':
+            return '1d'    # Daily candlesticks for 6 months
+        elif period == '1Y':
+            return '1d'    # Daily candlesticks for 1 year
+        elif period == '5Y':
+            return '1wk'   # Weekly candlesticks for 5 years
+        else:
+            return '1d'    # Default to daily
+    
+    def map_period_to_yfinance(self, period):
+        """Map our period format to yfinance period format."""
+        period_map = {
+            '1M': '1mo',
+            '3M': '3mo',
+            '6M': '6mo',
+            '1Y': '1y',
+            '5Y': '5y'
+        }
+        return period_map.get(period, '1y')
 
     def get_yfinance_data(self, symbol):
         """Fetch financial metrics from yfinance."""
@@ -445,8 +483,8 @@ class StockPlotter:
                 )
 
     # ADD: User-Defined Elliott Wave Projections with Enhanced Features
-    def add_user_elliott_waves(self, fig, x_dates, elliott_points, row=1, col=1, 
-                              show_fib_levels=False, extend_projections=True):
+    def add_user_elliott_waves(self, fig, x_dates, elliott_points, row=1, col=1,
+                               show_fib_levels=False, extend_projections=True):
         if not elliott_points or len(elliott_points) < 2:
             return
 
@@ -740,8 +778,9 @@ class StockPlotter:
     def create_stock_plot(self, ticker, period, chart_mode='fib', manual_fib=False,
                           show_extensions=False, fib_high=None, moving_averages=None,
                           show_fib=False, include_financials=True, elliott_points=None,
-                          show_elliott_auto_waves=False, show_rsi=False, show_macd=False, 
-                          elliott_fib_levels=None):
+                          show_elliott_auto_waves=False, show_rsi=False, show_macd=False,
+                          show_volume=False, show_candlestick=False, elliott_fib_levels=None):
+
         """
         Create a complete stock plot with price data and optional indicators.
 
@@ -756,6 +795,12 @@ class StockPlotter:
             show_fib: Whether to show Fibonacci lines (default: False)
             include_financials: Whether to include financial metrics (default: True)
             elliott_points: List of user-defined points for Elliott waves (default: None)
+            show_elliott_auto_waves: Whether to show auto-generated Elliott waves (default: False)
+            show_rsi: Whether to show RSI subplot (default: False)
+            show_macd: Whether to show MACD subplot (default: False)
+            show_volume: Whether to show volume subplot (default: False)
+            show_candlestick: Whether to use candlestick or line for price (default: True)
+            elliott_fib_levels: Elliott wave enhancement settings (default: None)
 
         Returns:
             dict: Contains figure, price stats, financial metrics, and price target
@@ -767,34 +812,45 @@ class StockPlotter:
         start_date, end_date = self.get_period_dates(period)
 
         # Fetch stock data
-        df = self.get_stock_data(ticker, start_date, end_date)
+        df = self.get_stock_data(ticker, start_date, end_date, period)
         if df.empty:
             raise ValueError(f"No data found for ticker: {ticker}")
 
         # Create dynamic subplots based on indicators
-        subplot_count = 1
-        subplot_titles = ['Stock Price with Indicators']
-        row_heights = [1.0]
-        
+        subplot_count = 1  # Always price
+        row_heights = [1.0]  # Initial price height
+        volume_row = None
+        rsi_row = None
+        macd_row = None
+        current_row = 2  # Start after price row (1)
+
+        if show_volume:
+            volume_row = current_row
+            subplot_count += 1
+            row_heights.append(0.2)
+            current_row += 1
+
         if show_rsi:
+            rsi_row = current_row
             subplot_count += 1
-            subplot_titles.append('Relative Strength Index (RSI)')
-            row_heights = [0.6, 0.2] if subplot_count == 2 else [0.5, 0.25, 0.25]
-            
+            row_heights.append(0.2)
+            current_row += 1
+
         if show_macd:
+            macd_row = current_row
             subplot_count += 1
-            subplot_titles.append('MACD')
-            if subplot_count == 2:
-                row_heights = [0.6, 0.4]
-            else:
-                row_heights = [0.5, 0.25, 0.25]
+            row_heights.append(0.2)
+
+        # Normalize heights to sum to 1.0
+        total_height_sum = sum(row_heights)
+        row_heights = [h / total_height_sum for h in row_heights]
 
         fig = sp.make_subplots(
             rows=subplot_count, cols=1,
             shared_xaxes=True,
             vertical_spacing=0.05,
             row_heights=row_heights,
-            subplot_titles=subplot_titles
+            subplot_titles=[''] * subplot_count
         )
 
         # Convert index to datetime if needed
@@ -804,18 +860,45 @@ class StockPlotter:
         x_dates = df.index.strftime('%Y-%m-%d').tolist()
         y_values = df['Close'].tolist()
 
-        # Add price trace
-        fig.add_trace(go.Scatter(
-            x=x_dates,
-            y=y_values,
-            mode='lines',
-            name='Close Price',
-            line=dict(color='#0ac775', width=2)
-        ), row=1, col=1)
-
-        # Add moving averages if specified
-        if moving_averages and len(moving_averages) > 0:
-            self.add_moving_averages(fig, df, x_dates, moving_averages, row=1, col=1)
+        # Add price trace (candlestick or line)
+        if show_candlestick:
+            # Check if OHLC columns exist
+            required_cols = ['Open', 'High', 'Low', 'Close']
+            missing_cols = [col for col in required_cols if col not in df.columns]
+            if missing_cols:
+                print(f"Warning: Missing OHLC columns for candlestick: {missing_cols}")
+                print(f"Available columns: {df.columns.tolist()}")
+                # Fallback to line chart if OHLC data is missing
+                price_trace = go.Scatter(
+                    x=x_dates,
+                    y=y_values,
+                    mode='lines',
+                    name='Close Price (Fallback)',
+                    line=dict(color='#0ac775', width=2)
+                )
+            else:
+                price_trace = go.Candlestick(
+                    x=x_dates,
+                    open=df['Open'],
+                    high=df['High'],
+                    low=df['Low'],
+                    close=df['Close'],
+                    name='Price',
+                    increasing_line_color='#22c55e',
+                    decreasing_line_color='#ef4444',
+                    increasing_fillcolor='#22c55e',
+                    decreasing_fillcolor='#ef4444'
+                )
+        else:
+            price_trace = go.Scatter(
+                x=x_dates,
+                y=y_values,
+                mode='lines',
+                name='Close Price',
+                line=dict(color='#0ac775', width=2)
+            )
+        
+        fig.add_trace(price_trace, row=1, col=1)
 
         # Add Fibonacci lines if requested and toggled on
         if chart_mode == 'fib' and show_fib:
@@ -831,18 +914,28 @@ class StockPlotter:
             # Get Elliott Wave enhancement settings from frontend
             show_fib_levels = elliott_fib_levels is not None and elliott_fib_levels.get('show_fib_levels', False)
             extend_projections = elliott_fib_levels is None or elliott_fib_levels.get('extend_projections', True)
-            
-            self.add_user_elliott_waves(fig, x_dates, elliott_points, row=1, col=1, 
-                                      show_fib_levels=show_fib_levels, 
-                                      extend_projections=extend_projections)
+
+            self.add_user_elliott_waves(fig, x_dates, elliott_points, row=1, col=1,
+                                        show_fib_levels=show_fib_levels,
+                                        extend_projections=extend_projections)
         elif show_elliott_auto_waves:
             # Only show auto-generated Elliott waves if the user has enabled the toggle
             self.add_auto_elliott_waves(fig, df, df['Close'], x_dates, row=1, col=1)
 
+        # Add volume if toggled
+        if show_volume:
+            colors = ['#22c55e' if row['Close'] > row['Open'] else '#ef4444' for _, row in df.iterrows()]
+            volume_bar = go.Bar(
+                x=x_dates,
+                y=df['Volume'].tolist(),
+                name='Volume',
+                marker_color=colors,
+                opacity=0.8  # Increased opacity for better visibility
+            )
+            fig.add_trace(volume_bar, row=volume_row, col=1)
+
         # Add RSI subplot if requested
-        current_row = 1
         if show_rsi:
-            current_row += 1
             rsi = self.calculate_rsi(df['Close'])
             fig.add_trace(go.Scatter(
                 x=x_dates,
@@ -850,19 +943,19 @@ class StockPlotter:
                 mode='lines',
                 name='RSI',
                 line=dict(color='#9C27B0', width=2)
-            ), row=current_row, col=1)
-            
+            ), row=rsi_row, col=1)
+
             # Add RSI overbought/oversold lines
-            fig.add_hline(y=70, line_dash="dash", line_color="red", 
-                         annotation_text="Overbought (70)", row=current_row, col=1)
-            fig.add_hline(y=30, line_dash="dash", line_color="green", 
-                         annotation_text="Oversold (30)", row=current_row, col=1)
+            fig.add_hline(y=70, line_dash="dash", line_color="red",
+                          row=rsi_row, col=1)
+            fig.add_hline(y=30, line_dash="dash", line_color="green",
+                          row=rsi_row, col=1)
+            fig.update_yaxes(range=[0,100], row=rsi_row, col=1)
 
         # Add MACD subplot if requested
         if show_macd:
-            current_row += 1
             macd_line, signal_line, histogram = self.calculate_macd(df['Close'])
-            
+
             # MACD Line
             fig.add_trace(go.Scatter(
                 x=x_dates,
@@ -870,8 +963,8 @@ class StockPlotter:
                 mode='lines',
                 name='MACD',
                 line=dict(color='#2196F3', width=2)
-            ), row=current_row, col=1)
-            
+            ), row=macd_row, col=1)
+
             # Signal Line
             fig.add_trace(go.Scatter(
                 x=x_dates,
@@ -879,8 +972,8 @@ class StockPlotter:
                 mode='lines',
                 name='Signal Line',
                 line=dict(color='#FF5722', width=2)
-            ), row=current_row, col=1)
-            
+            ), row=macd_row, col=1)
+
             # Histogram
             colors = ['#4CAF50' if val >= 0 else '#F44336' for val in histogram]
             fig.add_trace(go.Bar(
@@ -889,16 +982,20 @@ class StockPlotter:
                 name='Histogram',
                 marker_color=colors,
                 opacity=0.7
-            ), row=current_row, col=1)
-            
+            ), row=macd_row, col=1)
+
             # Add zero line
-            fig.add_hline(y=0, line_dash="solid", line_color="gray", 
-                         line_width=1, row=current_row, col=1)
+            fig.add_hline(y=0, line_dash="solid", line_color="gray",
+                          line_width=1, row=macd_row, col=1)
+
+        # Add moving averages if specified
+        if moving_averages and len(moving_averages) > 0:
+            self.add_moving_averages(fig, df, x_dates, moving_averages, row=1, col=1)
 
         # Update layout with modern styling
         period_name = {
             "1M": "Past Month",
-            "3M": "Past 3 Months", 
+            "3M": "Past 3 Months",
             "6M": "Past 6 Months",
             "1Y": "Past Year",
             "5Y": "Past 5 Years"
@@ -912,7 +1009,7 @@ class StockPlotter:
         fig.update_layout(
             title=dict(
                 text=f"{ticker} Stock Price - {period_name}",
-                font=dict(size=24, color='#2E3440'),
+                font=dict(size=20, color='#000000'),
                 x=0.5,
                 xanchor='center'
             ),
@@ -920,37 +1017,50 @@ class StockPlotter:
             showlegend=True,
             legend=dict(
                 orientation="h",
-                yanchor="bottom", 
-                y=1.02,
-                xanchor="right",
-                x=1,
-                bgcolor="rgba(255,255,255,0.8)",
-                bordercolor="rgba(0,0,0,0.2)",
+                yanchor="bottom",
+                y=-0.1,
+                xanchor="center",
+                x=0.5,
+                bgcolor="white",
+                bordercolor="rgba(0,0,0,0.1)",
                 borderwidth=1
             ),
             template="plotly_white",
-            plot_bgcolor='rgba(248,249,250,0.8)',
+            plot_bgcolor='white',
             paper_bgcolor='white',
-            font=dict(family="Inter, -apple-system, BlinkMacSystemFont, sans-serif", size=12),
-            margin=dict(l=60, r=60, t=80, b=60)
+            font=dict(family="Arial, sans-serif", size=12),
+            margin=dict(l=60, r=60, t=80, b=60),
+            hovermode='x unified',
+            # Disable the automatic range slider that appears with candlestick charts
+            xaxis=dict(
+                rangeslider=dict(visible=False),
+                type='date'
+            )
         )
 
-        # Update axis titles dynamically
-        fig.update_xaxes(title_text="Date", row=subplot_count, col=1)
+        # Update axis titles dynamically and disable range slider for all x-axes
+        fig.update_xaxes(title_text="Date", row=subplot_count, col=1, rangeslider=dict(visible=False))
         fig.update_yaxes(title_text="Price (USD)", row=1, col=1)
+        if show_volume:
+            fig.update_yaxes(title_text="Volume", row=volume_row, col=1)
         
-        current_row = 1
+        # Ensure range slider is disabled for all x-axes
+        for i in range(1, subplot_count + 1):
+            fig.update_xaxes(rangeslider=dict(visible=False), row=i, col=1)
         if show_rsi:
-            current_row += 1
-            fig.update_yaxes(title_text="RSI", row=current_row, col=1)
-            
+            fig.update_yaxes(title_text="RSI", row=rsi_row, col=1)
         if show_macd:
-            current_row += 1
-            fig.update_yaxes(title_text="MACD", row=current_row, col=1)
+            fig.update_yaxes(title_text="MACD", row=macd_row, col=1)
 
-        # Improve grid and styling
-        fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='rgba(128,128,128,0.2)')
-        fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='rgba(128,128,128,0.2)')
+        # Cleaner grid: faint for price, none for others
+        fig.update_xaxes(showgrid=False)
+        fig.update_yaxes(showgrid=True, gridcolor='rgba(0,0,0,0.05)', gridwidth=1, row=1, col=1)
+        if show_volume:
+            fig.update_yaxes(showgrid=False, row=volume_row, col=1)
+        if show_rsi:
+            fig.update_yaxes(showgrid=False, row=rsi_row, col=1)
+        if show_macd:
+            fig.update_yaxes(showgrid=False, row=macd_row, col=1)
 
         # Get financial data
         if include_financials:

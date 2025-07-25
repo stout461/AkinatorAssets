@@ -382,6 +382,7 @@ def plot():
     Main endpoint to return Plotly chart and stock/financial data in JSON.
     Now uses the StockPlotter class for all plotting logic.
     """
+    print("DEBUG: /plot endpoint hit")
     try:
         # Extract parameters from request
         ticker = request.form['ticker'].strip().upper()
@@ -417,9 +418,12 @@ def plot():
         # Elliott Wave Auto-generation toggle
         show_elliott_auto_waves = request.form.get('show_elliott_auto_waves', 'false') == 'true'
 
-        # NEW: RSI and MACD toggles
+        # NEW: RSI and MACD toggles and volume
         show_rsi = request.form.get('showRSI', 'false') == 'true'
         show_macd = request.form.get('showMACD', 'false') == 'true'
+        show_volume = request.form.get('showVolume', 'false') == 'true'
+        show_candlestick = request.form.get('showCandlestick', 'false') == 'true'
+
 
         # Elliott Wave enhancement settings
         elliott_fib_levels = None
@@ -446,6 +450,8 @@ def plot():
             show_elliott_auto_waves=show_elliott_auto_waves,  # Pass Elliott auto-waves toggle
             show_rsi=show_rsi,  # Pass RSI toggle
             show_macd=show_macd,  # Pass MACD toggle
+            show_volume=show_volume,  # Pass Volume toggle
+            show_candlestick=show_candlestick,  # Pass Candlestick toggle
             elliott_fib_levels=elliott_fib_levels  # Pass Elliott Wave enhancements
         )
 

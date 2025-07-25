@@ -1,6 +1,5 @@
 import pandas as pd
 import plotly.graph_objs as go
-import plotly.subplots as sp
 import yfinance as yf
 import time
 import random
@@ -779,7 +778,8 @@ class StockPlotter:
                           show_extensions=False, fib_high=None, moving_averages=None,
                           show_fib=False, include_financials=True, elliott_points=None,
                           show_elliott_auto_waves=False, show_rsi=False, show_macd=False,
-                          show_volume=False, show_candlestick=False, elliott_fib_levels=None):
+                          show_volume=False, show_candlestick=False, elliott_fib_levels=None,
+                          subplot_config=None):
 
         """
         Create a complete stock plot with price data and optional indicators.
@@ -801,9 +801,10 @@ class StockPlotter:
             show_volume: Whether to show volume subplot (default: False)
             show_candlestick: Whether to use candlestick or line for price (default: True)
             elliott_fib_levels: Elliott wave enhancement settings (default: None)
+            subplot_config: Unified subplot configuration dict (optional, overrides individual flags)
 
         Returns:
-            dict: Contains figure, price stats, financial metrics, and price target
+            dict: Contains figure, price stats, financial metrics, price target, and layout metadata
         """
         if not ticker:
             raise ValueError("Please enter a valid ticker symbol")
@@ -816,41 +817,37 @@ class StockPlotter:
         if df.empty:
             raise ValueError(f"No data found for ticker: {ticker}")
 
-        # Create dynamic subplots based on indicators
-        subplot_count = 1  # Always price
-        row_heights = [1.0]  # Initial price height
-        volume_row = None
-        rsi_row = None
-        macd_row = None
-        current_row = 2  # Start after price row (1)
+        # Initialize SubplotManager
+        from sub_plots import SubplotManager
+        subplot_manager = SubplotManager()
 
-        if show_volume:
-            volume_row = current_row
-            subplot_count += 1
-            row_heights.append(0.2)
-            current_row += 1
+        # Determine requested subplots from configuration or individual flags
+        if subplot_config:
+            # Use unified subplot configuration if provided
+            requested_subplots = subplot_config.get('subplots', [])
+        else:
+            # Build subplot list from individual boolean flags (backward compatibility)
+            requested_subplots = []
+            if show_volume:
+                requested_subplots.append('volume')
+            if show_rsi:
+                requested_subplots.append('rsi')
+            if show_macd:
+                requested_subplots.append('macd')
 
-        if show_rsi:
-            rsi_row = current_row
-            subplot_count += 1
-            row_heights.append(0.2)
-            current_row += 1
+        # Create subplot figure using SubplotManager
+        period_name = {
+            "1M": "Past Month",
+            "3M": "Past 3 Months", 
+            "6M": "Past 6 Months",
+            "1Y": "Past Year",
+            "5Y": "Past 5 Years"
+        }.get(period, "Past Year")
 
-        if show_macd:
-            macd_row = current_row
-            subplot_count += 1
-            row_heights.append(0.2)
-
-        # Normalize heights to sum to 1.0
-        total_height_sum = sum(row_heights)
-        row_heights = [h / total_height_sum for h in row_heights]
-
-        fig = sp.make_subplots(
-            rows=subplot_count, cols=1,
-            shared_xaxes=True,
-            vertical_spacing=0.05,
-            row_heights=row_heights,
-            subplot_titles=[''] * subplot_count
+        fig = subplot_manager.create_subplot_figure(
+            requested_subplots,
+            figure_title=f"{ticker} Stock Price - {period_name}",
+            vertical_spacing=0.05
         )
 
         # Convert index to datetime if needed
@@ -922,97 +919,49 @@ class StockPlotter:
             # Only show auto-generated Elliott waves if the user has enabled the toggle
             self.add_auto_elliott_waves(fig, df, df['Close'], x_dates, row=1, col=1)
 
-        # Add volume if toggled
-        if show_volume:
-            colors = ['#22c55e' if row['Close'] > row['Open'] else '#ef4444' for _, row in df.iterrows()]
-            volume_bar = go.Bar(
-                x=x_dates,
-                y=df['Volume'].tolist(),
-                name='Volume',
-                marker_color=colors,
-                opacity=0.8  # Increased opacity for better visibility
-            )
-            fig.add_trace(volume_bar, row=volume_row, col=1)
+        # Add subplot data using SubplotManager
+        layout_result = fig._subplot_manager_metadata['layout_result']
+        
+        # Add volume subplot data if requested
+        if 'volume' in requested_subplots:
+            volume_data = {
+                'dates': x_dates,
+                'volume': df['Volume'].tolist(),
+                'colors': ['#22c55e' if row['Close'] > row['Open'] else '#ef4444' for _, row in df.iterrows()]
+            }
+            subplot_manager.add_volume_subplot(fig, volume_data)
 
-        # Add RSI subplot if requested
-        if show_rsi:
+        # Add RSI subplot data if requested
+        if 'rsi' in requested_subplots:
             rsi = self.calculate_rsi(df['Close'])
-            fig.add_trace(go.Scatter(
-                x=x_dates,
-                y=rsi.tolist(),
-                mode='lines',
-                name='RSI',
-                line=dict(color='#9C27B0', width=2)
-            ), row=rsi_row, col=1)
+            rsi_data = {
+                'dates': x_dates,
+                'rsi': rsi.tolist()
+            }
+            subplot_manager.add_rsi_subplot(fig, rsi_data)
 
-            # Add RSI overbought/oversold lines
-            fig.add_hline(y=70, line_dash="dash", line_color="red",
-                          row=rsi_row, col=1)
-            fig.add_hline(y=30, line_dash="dash", line_color="green",
-                          row=rsi_row, col=1)
-            fig.update_yaxes(range=[0,100], row=rsi_row, col=1)
-
-        # Add MACD subplot if requested
-        if show_macd:
+        # Add MACD subplot data if requested
+        if 'macd' in requested_subplots:
             macd_line, signal_line, histogram = self.calculate_macd(df['Close'])
-
-            # MACD Line
-            fig.add_trace(go.Scatter(
-                x=x_dates,
-                y=macd_line.tolist(),
-                mode='lines',
-                name='MACD',
-                line=dict(color='#2196F3', width=2)
-            ), row=macd_row, col=1)
-
-            # Signal Line
-            fig.add_trace(go.Scatter(
-                x=x_dates,
-                y=signal_line.tolist(),
-                mode='lines',
-                name='Signal Line',
-                line=dict(color='#FF5722', width=2)
-            ), row=macd_row, col=1)
-
-            # Histogram
-            colors = ['#4CAF50' if val >= 0 else '#F44336' for val in histogram]
-            fig.add_trace(go.Bar(
-                x=x_dates,
-                y=histogram.tolist(),
-                name='Histogram',
-                marker_color=colors,
-                opacity=0.7
-            ), row=macd_row, col=1)
-
-            # Add zero line
-            fig.add_hline(y=0, line_dash="solid", line_color="gray",
-                          line_width=1, row=macd_row, col=1)
+            macd_data = {
+                'dates': x_dates,
+                'macd': macd_line.tolist(),
+                'signal': signal_line.tolist(),
+                'histogram': histogram.tolist()
+            }
+            subplot_manager.add_macd_subplot(fig, macd_data)
 
         # Add moving averages if specified
         if moving_averages and len(moving_averages) > 0:
             self.add_moving_averages(fig, df, x_dates, moving_averages, row=1, col=1)
 
-        # Update layout with modern styling
-        period_name = {
-            "1M": "Past Month",
-            "3M": "Past 3 Months",
-            "6M": "Past 6 Months",
-            "1Y": "Past Year",
-            "5Y": "Past 5 Years"
-        }.get(period, "Past Year")
-
-        # Calculate dynamic height based on subplots
+        # Calculate dynamic height based on subplots using layout information
         base_height = 600
         subplot_height = 200
-        total_height = base_height + (subplot_count - 1) * subplot_height
+        total_height = base_height + (layout_result.total_rows - 1) * subplot_height
 
+        # Update layout with modern styling
         fig.update_layout(
-            title=dict(
-                text=f"{ticker} Stock Price - {period_name}",
-                font=dict(size=20, color='#000000'),
-                x=0.5,
-                xanchor='center'
-            ),
             height=total_height,
             showlegend=True,
             legend=dict(
@@ -1038,29 +987,33 @@ class StockPlotter:
             )
         )
 
-        # Update axis titles dynamically and disable range slider for all x-axes
-        fig.update_xaxes(title_text="Date", row=subplot_count, col=1, rangeslider=dict(visible=False))
+        # Update axis titles dynamically using layout information
+        fig.update_xaxes(title_text="Date", row=layout_result.total_rows, col=1, rangeslider=dict(visible=False))
         fig.update_yaxes(title_text="Price (USD)", row=1, col=1)
-        if show_volume:
-            fig.update_yaxes(title_text="Volume", row=volume_row, col=1)
+        
+        # Update axis titles for subplots using SubplotManager configuration
+        for subplot_name in requested_subplots:
+            if subplot_name in layout_result.subplot_rows:
+                row_num = layout_result.subplot_rows[subplot_name]
+                config = subplot_manager.get_subplot_config(subplot_name)
+                if config and config.y_axis_title:
+                    fig.update_yaxes(title_text=config.y_axis_title, row=row_num, col=1)
         
         # Ensure range slider is disabled for all x-axes
-        for i in range(1, subplot_count + 1):
+        for i in range(1, layout_result.total_rows + 1):
             fig.update_xaxes(rangeslider=dict(visible=False), row=i, col=1)
-        if show_rsi:
-            fig.update_yaxes(title_text="RSI", row=rsi_row, col=1)
-        if show_macd:
-            fig.update_yaxes(title_text="MACD", row=macd_row, col=1)
 
-        # Cleaner grid: faint for price, none for others
+        # Configure grid settings using SubplotManager configuration
         fig.update_xaxes(showgrid=False)
         fig.update_yaxes(showgrid=True, gridcolor='rgba(0,0,0,0.05)', gridwidth=1, row=1, col=1)
-        if show_volume:
-            fig.update_yaxes(showgrid=False, row=volume_row, col=1)
-        if show_rsi:
-            fig.update_yaxes(showgrid=False, row=rsi_row, col=1)
-        if show_macd:
-            fig.update_yaxes(showgrid=False, row=macd_row, col=1)
+        
+        # Apply grid settings for subplots based on their configuration
+        for subplot_name in requested_subplots:
+            if subplot_name in layout_result.subplot_rows:
+                row_num = layout_result.subplot_rows[subplot_name]
+                config = subplot_manager.get_subplot_config(subplot_name)
+                if config:
+                    fig.update_yaxes(showgrid=config.show_grid, row=row_num, col=1)
 
         # Get financial data
         if include_financials:
@@ -1077,5 +1030,12 @@ class StockPlotter:
             'figure': fig,
             'price_stats': price_stats,
             'financial_metrics': financial_metrics,
-            'price_target': price_target
+            'price_target': price_target,
+            'layout_info': {
+                'subplot_rows': layout_result.subplot_rows,
+                'height_ratios': layout_result.height_ratios,
+                'conflicts_resolved': layout_result.conflicts_resolved,
+                'warnings': layout_result.warnings,
+                'total_rows': layout_result.total_rows
+            }
         }

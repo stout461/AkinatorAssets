@@ -117,17 +117,7 @@ class ChartUI {
             volumeTab.removeClass('indicator-active');
         }
 
-        // Update Candlestick indicator visual state
-        const candlestickEnabled = $('#showCandlestick').is(':checked');
-        const candlestickTab = $('label[for="candlestickMode"]');
-
-        if (candlestickEnabled) {
-            candlestickTab.addClass('indicator-active');
-        } else {
-            candlestickTab.removeClass('indicator-active');
-        }
-
-        console.log(`📊 Indicator states updated - RSI: ${rsiEnabled}, MACD: ${macdEnabled}, Volume: ${volumeEnabled}, Candlestick: ${candlestickEnabled}`);
+        console.log(`📊 Indicator states updated - RSI: ${rsiEnabled}, MACD: ${macdEnabled}, Volume: ${volumeEnabled}`);
     }
 
     updateCustomMADisplay(customMAs) {
@@ -286,6 +276,7 @@ class StockChart {
 
     init() {
         this.setupEventListeners();
+        this.initializeGraphSettings();
         console.log(`📊 StockChart initialized in ${this.mode} mode for container: ${this.containerId}`);
     }
 
@@ -516,6 +507,9 @@ class StockChart {
 
         // Restore persistent trendlines after chart refresh
         this.state.restoreTrendlines(this.containerId);
+
+        // Apply graph settings after chart is rendered
+        this.applyGraphSettings();
 
         // Update indicator visual state after chart rendering
         this.ui.updateIndicatorVisualState();
@@ -766,6 +760,17 @@ class StockChart {
             this.ui.updateIndicatorVisualState();
             this.loadChartData(true);
         });
+
+        // Graph Settings listeners
+        $('#showGraphLines').on('change', () => {
+            const enabled = $('#showGraphLines').is(':checked');
+            this.toggleGraphLines(enabled);
+        });
+
+        $('#showTimeSelector').on('change', () => {
+            const enabled = $('#showTimeSelector').is(':checked');
+            this.toggleTimeSelector(enabled);
+        });
     }
 
     setupSettingsListeners() {
@@ -798,10 +803,6 @@ class StockChart {
             // Toggle Volume indicator when Volume mode is selected
             const currentVolume = $('#showVolume').is(':checked');
             $('#showVolume').prop('checked', !currentVolume);
-        } else if (analysisMode === 'candlestick') {
-            // Toggle Candlestick indicator when Candlestick mode is selected
-            const currentCandlestick = $('#showCandlestick').is(':checked');
-            $('#showCandlestick').prop('checked', !currentCandlestick);
         }
         // For other modes (fib, trendlines, elliott, ma), don't change indicator settings
         // This allows all indicators to persist across all modes
@@ -881,6 +882,108 @@ class StockChart {
             $('#fibHighValue').val(state.fibSettings.fibHigh || '');
             $('#showExtensions').prop('checked', state.fibSettings.showExtensions);
             $('#showFib').prop('checked', state.fibSettings.showFib);
+        }
+    }
+
+    // ========================================
+    // GRAPH SETTINGS METHODS
+    // ========================================
+
+    toggleGraphLines(enabled) {
+        try {
+            const layout = {
+                xaxis: { showgrid: enabled },
+                yaxis: { showgrid: enabled }
+            };
+            Plotly.relayout(this.containerId, layout);
+            this.saveSettingToStorage('showGraphLines', enabled);
+            console.log(`Graph lines ${enabled ? 'enabled' : 'disabled'}`);
+        } catch (error) {
+            console.warn('Failed to update graph lines setting:', error);
+            // Revert toggle state
+            $('#showGraphLines').prop('checked', !enabled);
+            this.ui.showError('Failed to update graph lines setting');
+        }
+    }
+
+    saveSettingToStorage(key, value) {
+        try {
+            localStorage.setItem(`chart_${key}`, JSON.stringify(value));
+        } catch (error) {
+            console.warn('Failed to save setting to localStorage:', error);
+        }
+    }
+
+    loadSettingFromStorage(key, defaultValue = false) {
+        try {
+            const stored = localStorage.getItem(`chart_${key}`);
+            return stored ? JSON.parse(stored) : defaultValue;
+        } catch (error) {
+            console.warn('Failed to load setting from localStorage:', error);
+            return defaultValue;
+        }
+    }
+
+    initializeGraphSettings() {
+        // Load saved settings and set toggle states (don't apply to chart yet)
+        const showGraphLines = this.loadSettingFromStorage('showGraphLines', true);
+        const showTimeSelector = this.loadSettingFromStorage('showTimeSelector', false);
+        
+        $('#showGraphLines').prop('checked', showGraphLines);
+        $('#showTimeSelector').prop('checked', showTimeSelector);
+        
+        console.log(`Graph settings initialized - Graph Lines: ${showGraphLines}, Time Selector: ${showTimeSelector}`);
+    }
+
+    toggleTimeSelector(enabled) {
+        try {
+            // Get current layout to check for existing subplots
+            const graphDiv = document.getElementById(this.containerId);
+            if (!graphDiv || !graphDiv.layout) {
+                console.warn('Chart not ready for time selector toggle');
+                return;
+            }
+
+            // For now, disable time selector when subplots are present to avoid conflicts
+            const hasSubplots = graphDiv.layout.yaxis2 || graphDiv.layout.yaxis3 || graphDiv.layout.yaxis4;
+            
+            if (enabled && hasSubplots) {
+                console.warn('Time selector disabled when subplots (RSI, MACD, Volume) are present');
+                $('#showTimeSelector').prop('checked', false);
+                this.ui.showError('Time selector is not compatible with technical indicators. Please disable RSI, MACD, or Volume first.');
+                return;
+            }
+
+            const layout = {
+                xaxis: { 
+                    rangeslider: { 
+                        visible: enabled,
+                        thickness: enabled ? 0.15 : 0
+                    }
+                }
+            };
+
+            Plotly.relayout(this.containerId, layout);
+            this.saveSettingToStorage('showTimeSelector', enabled);
+            console.log(`Time selector ${enabled ? 'enabled' : 'disabled'}`);
+        } catch (error) {
+            console.warn('Failed to update time selector setting:', error);
+            // Revert toggle state
+            $('#showTimeSelector').prop('checked', !enabled);
+            this.ui.showError('Failed to update time selector setting');
+        }
+    }
+
+    applyGraphSettings() {
+        // Apply graph settings to the rendered chart
+        const showGraphLines = $('#showGraphLines').is(':checked');
+        if (showGraphLines !== undefined) {
+            this.toggleGraphLines(showGraphLines);
+        }
+
+        const showTimeSelector = $('#showTimeSelector').is(':checked');
+        if (showTimeSelector !== undefined) {
+            this.toggleTimeSelector(showTimeSelector);
         }
     }
 }

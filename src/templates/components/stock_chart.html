@@ -37,53 +37,85 @@
                     <span>Analysis Modes</span>
                 </div>
                 <div class="section-content">
-                    <div class="mode-tabs">
-                        <input type="radio" name="analysisMode" id="fibMode" value="fib" checked>
-                        <label for="fibMode" class="mode-tab">
-                            <i class="fas fa-wave-square"></i>
-                            <span>Fibonacci</span>
-                        </label>
+                    <div class="mode-tabs-container">
+                        <!-- First Row: 4 items -->
+                        <div class="mode-tabs-row">
+                            <input type="radio" name="analysisMode" id="fibMode" value="fib" checked>
+                            <label for="fibMode" class="mode-tab">
+                                <i class="fas fa-wave-square"></i>
+                                <span>Fibonacci</span>
+                            </label>
 
-                        <input type="radio" name="analysisMode" id="trendlinesMode" value="trendlines">
-                        <label for="trendlinesMode" class="mode-tab">
-                            <i class="fas fa-chart-line"></i>
-                            <span>Trendlines</span>
-                        </label>
+                            <input type="radio" name="analysisMode" id="trendlinesMode" value="trendlines">
+                            <label for="trendlinesMode" class="mode-tab">
+                                <i class="fas fa-chart-line"></i>
+                                <span>Trendlines</span>
+                            </label>
 
-                        <input type="radio" name="analysisMode" id="elliottMode" value="elliott">
-                        <label for="elliottMode" class="mode-tab">
-                            <i class="fas fa-water"></i>
-                            <span>Elliott</span>
-                        </label>
+                            <input type="radio" name="analysisMode" id="elliottMode" value="elliott">
+                            <label for="elliottMode" class="mode-tab">
+                                <i class="fas fa-water"></i>
+                                <span>Elliott</span>
+                            </label>
 
-                        <input type="radio" name="analysisMode" id="rsiMode" value="rsi">
-                        <label for="rsiMode" class="mode-tab mode-indicator">
-                            <i class="fas fa-chart-bar"></i>
-                            <span>RSI</span>
-                        </label>
+                            <input type="radio" name="analysisMode" id="rsiMode" value="rsi">
+                            <label for="rsiMode" class="mode-tab mode-indicator">
+                                <i class="fas fa-chart-bar"></i>
+                                <span>RSI</span>
+                            </label>
+                        </div>
+                        
+                        <!-- Second Row: 3 items -->
+                        <div class="mode-tabs-row">
+                            <input type="radio" name="analysisMode" id="macdMode" value="macd">
+                            <label for="macdMode" class="mode-tab mode-indicator">
+                                <i class="fas fa-signal"></i>
+                                <span>MACD</span>
+                            </label>
 
-                        <input type="radio" name="analysisMode" id="macdMode" value="macd">
-                        <label for="macdMode" class="mode-tab mode-indicator">
-                            <i class="fas fa-signal"></i>
-                            <span>MACD</span>
-                        </label>
+                            <input type="radio" name="analysisMode" id="volumeMode" value="volume">
+                            <label for="volumeMode" class="mode-tab mode-indicator">
+                                <i class="fas fa-chart-column"></i>
+                                <span>Volume</span>
+                            </label>
 
-                        <input type="radio" name="analysisMode" id="volumeMode" value="volume">
-                        <label for="volumeMode" class="mode-tab mode-indicator">
-                            <i class="fas fa-chart-column"></i>
-                            <span>Volume</span>
-                        </label>
+                            <input type="radio" name="analysisMode" id="maMode" value="ma">
+                            <label for="maMode" class="mode-tab">
+                                <i class="fas fa-chart-area"></i>
+                                <span>Moving Avg</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-                        <input type="radio" name="analysisMode" id="candlestickMode" value="candlestick">
-                        <label for="candlestickMode" class="mode-tab mode-indicator">
+            <!-- Graph Settings Section -->
+            <div class="settings-section graph-settings-section">
+                <div class="section-header">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Graph Settings</span>
+                </div>
+                <div class="section-content">
+                    <div class="graph-settings-buttons">
+                        <!-- Candlestick Toggle (moved from analysis modes) -->
+                        <input type="checkbox" id="showCandlestick">
+                        <label for="showCandlestick" class="graph-setting-btn">
                             <i class="fas fa-grip-lines-vertical"></i>
-                            <span>Candlestick</span>
+                            <span>Candlesticks</span>
                         </label>
-
-                        <input type="radio" name="analysisMode" id="maMode" value="ma">
-                        <label for="maMode" class="mode-tab">
-                            <i class="fas fa-chart-area"></i>
-                            <span>Moving Avg</span>
+                        
+                        <!-- New Graph Lines Toggle -->
+                        <input type="checkbox" id="showGraphLines">
+                        <label for="showGraphLines" class="graph-setting-btn">
+                            <i class="fas fa-grip-horizontal"></i>
+                            <span>Graph Lines</span>
+                        </label>
+                        
+                        <!-- New Subplot Time Selector Toggle -->
+                        <input type="checkbox" id="showTimeSelector">
+                        <label for="showTimeSelector" class="graph-setting-btn">
+                            <i class="fas fa-clock"></i>
+                            <span>Time Selector</span>
                         </label>
                     </div>
                 </div>
@@ -243,31 +275,6 @@
                             <div class="volume-components">
                                 <span class="component-indicator volume-up">Green: Price Up</span>
                                 <span class="component-indicator volume-down">Red: Price Down</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Candlestick Settings -->
-                <div id="candlestickSettings" class="mode-content">
-                    <div class="section-header">
-                        <i class="fas fa-grip-lines-vertical"></i>
-                        <span>Candlestick Settings</span>
-                    </div>
-                    <div class="section-content">
-                        <div class="inline-controls">
-                            <label class="compact-toggle">
-                                <input type="checkbox" id="showCandlestick">
-                                <span class="toggle-slider-mini"></span>
-                                <span class="toggle-text">Show Candlestick</span>
-                            </label>
-                            <div class="setting-info">
-                                <span class="info-text">Candlestick Chart</span>
-                                <small class="mode-help">OHLC price display (vs line chart)</small>
-                            </div>
-                            <div class="candlestick-components">
-                                <span class="component-indicator candle-up">Green: Bullish</span>
-                                <span class="component-indicator candle-down">Red: Bearish</span>
                             </div>
                         </div>
                     </div>

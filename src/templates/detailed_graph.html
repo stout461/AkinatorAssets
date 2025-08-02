@@ -128,6 +128,17 @@
 
             // Keyboard shortcuts
             $(document).keydown(function (e) {
+                // Don't trigger shortcuts when user is typing in input fields
+                if ($(e.target).is('input, textarea, select')) {
+                    return;
+                }
+
+                // Prevent default behavior for our shortcuts
+                const shortcutKeys = ['Escape', 'f', 'F', 't', 'T', 'e', 'E', 's', 'S'];
+                if (shortcutKeys.includes(e.key)) {
+                    e.preventDefault();
+                }
+
                 // Escape key to return to dashboard
                 if (e.key === 'Escape') {
                     window.location.href = '/';
@@ -135,18 +146,22 @@
                 // F key for Fibonacci mode
                 else if (e.key === 'f' || e.key === 'F') {
                     window.detailedChart.setChartMode('fib');
+                    console.log('🔧 Keyboard shortcut: Switched to Fibonacci mode');
                 }
                 // T key for Trendlines mode
                 else if (e.key === 't' || e.key === 'T') {
                     window.detailedChart.setChartMode('trendlines');
+                    console.log('🔧 Keyboard shortcut: Switched to Trendlines mode');
                 }
                 // E key for Elliott mode
                 else if (e.key === 'e' || e.key === 'E') {
                     window.detailedChart.setChartMode('elliott');
+                    console.log('🔧 Keyboard shortcut: Switched to Elliott mode');
                 }
                 // S key to toggle settings
                 else if (e.key === 's' || e.key === 'S') {
                     window.detailedChart.toggleSettings();
+                    console.log('🔧 Keyboard shortcut: Toggled settings panel');
                 }
             });
 

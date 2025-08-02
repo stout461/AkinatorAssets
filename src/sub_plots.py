@@ -860,6 +860,9 @@ class SubplotManager:
         
         # Configure x-axis properties for all subplots
         for i in range(1, layout_result.total_rows + 1):
+            # Only show x-axis labels and ticks on the bottom subplot
+            is_bottom_subplot = (i == layout_result.total_rows)
+            
             fig.update_xaxes(
                 showgrid=True,
                 gridwidth=1,
@@ -867,12 +870,81 @@ class SubplotManager:
                 showline=True,
                 linewidth=1,
                 linecolor='rgba(128,128,128,0.5)',
+                showticklabels=is_bottom_subplot,  # Only show labels on bottom
+                showspikes=is_bottom_subplot,     # Only show spikes on bottom
                 row=i,
                 col=1
             )
         
         # Configure y-axis properties for each subplot based on configuration
         self._configure_subplot_axes(fig, layout_result)
+        
+        # CRITICAL FIX: Configure domains to prevent main chart bleeding into subplots
+        if layout_result.total_rows > 1:
+            self._configure_subplot_domains(fig, layout_result)
+    
+    def _configure_subplot_domains(self, fig: go.Figure, layout_result: LayoutResult) -> None:
+        """
+        Configure y-axis domains for each subplot to prevent overlap.
+        
+        This method calculates and sets the proper domain (y-axis range) for each subplot
+        based on the calculated height ratios, ensuring no visual overlap between subplots.
+        
+        Row structure: Row 1 = Price (top), Row 2+ = Subplots (bottom)
+        Domain structure: y=0 (bottom) to y=1 (top)
+        
+        Args:
+            fig: Plotly figure to configure
+            layout_result: Layout calculation result with height ratios and subplot rows
+        """
+        if layout_result.total_rows <= 1:
+            return  # No subplots to configure
+        
+        # Height ratios: [price_height, subplot1_height, subplot2_height, ...]
+        height_ratios = layout_result.height_ratios
+        
+        # CORRECT APPROACH: Calculate domains from top to bottom to match row structure
+        # Row 1 (price) is at the top, Row 2+ (subplots) are at the bottom
+        
+        # Calculate price chart domain (Row 1 - at the top)
+        price_height = height_ratios[0]
+        subplot_total_height = sum(height_ratios[1:])  # All subplot heights combined
+        
+        price_domain_start = subplot_total_height  # Start above subplots
+        price_domain_end = 1.0  # Go to the very top
+        
+        # Update the price chart (row 1) y-axis domain
+        fig.update_yaxes(
+            domain=[price_domain_start, price_domain_end],
+            row=1,
+            col=1
+        )
+        
+        # Calculate subplot domains (Row 2+ - at the bottom)
+        # Start from bottom (y=0) and work upward
+        current_y = 0.0
+        
+        # Sort subplots by row number to process them in order (excluding price)
+        subplot_items = [(name, row) for name, row in layout_result.subplot_rows.items() if name != 'price']
+        subplot_items.sort(key=lambda x: x[1])  # Sort by row number
+        
+        for subplot_name, row in subplot_items:
+            # Get the height for this subplot (height_ratios[row-1] since rows are 1-based)
+            subplot_height = height_ratios[row - 1]
+            
+            # Calculate domain for this subplot
+            domain_start = current_y
+            domain_end = current_y + subplot_height
+            
+            # Update the y-axis domain for this subplot
+            fig.update_yaxes(
+                domain=[domain_start, domain_end],
+                row=row,
+                col=1
+            )
+            
+            # Move to next position
+            current_y = domain_end
     
     def _configure_subplot_axes(self, fig: go.Figure, layout_result: LayoutResult) -> None:
         """

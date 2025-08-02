@@ -60,7 +60,8 @@
   - Implement `add_subplot_data()` generic method for extensible subplot data addition
   - _Requirements: 5.1, 5.3, 5.4_
 
-- [ ] 6. Integrate SubplotManager with existing create_stock_plot function
+- [x] 6. Integrate SubplotManager with existing create_stock_plot function
+
 
 
 
@@ -73,36 +74,59 @@
   - clean up unused fucntions from stockplotter
   - _Requirements: 1.1, 1.5, 3.2_
 
-- [ ] 7. Update Flask API endpoints for unified subplot requests
+
+
+
+- [x] 7. Update Flask API endpoints for unified subplot requests
+
+
+
+
+
   - Modify `/plot` endpoint to accept new unified subplot configuration format
   - Add request validation for new subplot configuration structure
   - Implement enhanced response format that includes layout metadata
   - Add error handling that returns conflict information and suggestions to frontend
   - _Requirements: 3.1, 3.2, 3.4, 2.4_
 
-- [ ] 8. Create frontend SettingsCoordinator class
+
+
+
+
+- [x] 8. Create frontend SettingsCoordinator class
+
   - Create new `SettingsCoordinator` class in `src/static/js/chart.js` for unified settings management
   - Implement settings validation and conflict detection on frontend
+
+
+
   - Add methods for coordinating between different chart settings (analysis modes, graph settings, subplots)
   - Create settings persistence and restoration functionality
   - Clean up old implentation code
   - _Requirements: 3.1, 4.3, 4.5_
 
-- [ ] 9. Update frontend chart integration to use coordinated settings
+- [x] 9. Update frontend chart integration to use coordinated settings
+
   - Modify `StockChart` class to use `SettingsCoordinator` for all settings management
   - Update event handlers to work through coordinated settings system
   - Replace individual toggle handlers with unified settings update mechanism
   - Implement intelligent conflict resolution and user feedback in frontend
   - _Requirements: 2.3, 4.1, 4.4_
 
-- [ ] 10. Add comprehensive error handling and user feedback
+- [x] 10. Add comprehensive error handling and user feedback
+
+
+
   - Implement graceful error handling for subplot conflicts with clear user messages
   - Add loading states and progress indicators for complex subplot calculations
   - Create user-friendly conflict resolution dialogs with suggested alternatives
   - Add validation feedback for invalid subplot combinations
   - _Requirements: 2.3, 2.4, 3.4_
 
-- [ ] 11. Implement settings persistence and restoration
+- [x] 11. Implement settings persistence and restoration
+
+
+
   - Add localStorage integration for complex subplot and settings configurations
   - Implement settings migration for users with existing saved preferences
   - Create fallback mechanisms for invalid or corrupted saved settings

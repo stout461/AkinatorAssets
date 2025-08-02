@@ -380,12 +380,24 @@ def run_watchlist():
 def plot():
     """
     Main endpoint to return Plotly chart and stock/financial data in JSON.
-    Now uses the StockPlotter class for all plotting logic.
+    Now uses the StockPlotter class for all plotting logic with unified subplot configuration support.
+    
+    Enhanced to support:
+    - Unified subplot configuration format
+    - Request validation for subplot configuration structure
+    - Enhanced response format with layout metadata
+    - Error handling with conflict information and suggestions
     """
     print("DEBUG: /plot endpoint hit")
     try:
-        # Extract parameters from request
-        ticker = request.form['ticker'].strip().upper()
+        # Extract and validate basic parameters
+        ticker = request.form.get('ticker', '').strip().upper()
+        if not ticker:
+            return jsonify(
+                error="Ticker symbol is required",
+                validation_errors=[{"field": "ticker", "message": "Ticker symbol cannot be empty"}]
+            ), 400
+
         period = request.form.get('period', '1Y')
         chart_mode = request.form.get('chartMode', 'fib')
         manual_fib = request.form.get('manualFib', 'false') == 'true'
@@ -396,10 +408,10 @@ def plot():
         show_extensions = request.form.get('showExtensions', 'false') == 'true'
         fib_high = request.form.get('fibHigh')
         show_fib = request.form.get('showFib', 'false') == 'true'
+        include_financials = request.form.get('includeFinancials', 'true') == 'true'
+        show_candlestick = request.form.get('showCandlestick', 'false') == 'true'
 
-        include_financials = request.form.get('includeFinancials', 'true') == 'true'  # New param
-
-        # Handle moving averages
+        # Handle moving averages with validation
         moving_averages = []
         ma_periods_str = request.form.get('movingAverages', '')
         if ma_periods_str:
@@ -411,19 +423,19 @@ def plot():
                 print("Error parsing moving average periods, using defaults")
                 moving_averages = []
 
-        # ADD: Elliott Wave Support
+        # Elliott Wave Support with validation
+        elliott_points = None
         elliott_points_str = request.form.get('elliott_points', '')
-        elliott_points = json.loads(elliott_points_str) if elliott_points_str else None
+        if elliott_points_str:
+            try:
+                elliott_points = json.loads(elliott_points_str)
+            except json.JSONDecodeError as e:
+                return jsonify(
+                    error="Invalid Elliott wave points format",
+                    validation_errors=[{"field": "elliott_points", "message": f"JSON decode error: {str(e)}"}]
+                ), 400
 
-        # Elliott Wave Auto-generation toggle
         show_elliott_auto_waves = request.form.get('show_elliott_auto_waves', 'false') == 'true'
-
-        # NEW: RSI and MACD toggles and volume
-        show_rsi = request.form.get('showRSI', 'false') == 'true'
-        show_macd = request.form.get('showMACD', 'false') == 'true'
-        show_volume = request.form.get('showVolume', 'false') == 'true'
-        show_candlestick = request.form.get('showCandlestick', 'false') == 'true'
-
 
         # Elliott Wave enhancement settings
         elliott_fib_levels = None
@@ -435,42 +447,243 @@ def plot():
                 'extend_projections': extend_projections
             }
 
+        # Handle unified subplot configuration with comprehensive validation
+        subplot_config = None
+        subplot_config_str = request.form.get('subplotConfig', '')
+        
+        if subplot_config_str:
+            # Parse and validate unified subplot configuration
+            try:
+                subplot_config = json.loads(subplot_config_str)
+                print(f"DEBUG: Using unified subplot config: {subplot_config}")
+                
+                # Validate subplot configuration structure
+                validation_errors = _validate_subplot_config_structure(subplot_config)
+                if validation_errors:
+                    return jsonify(
+                        error="Invalid subplot configuration structure",
+                        validation_errors=validation_errors
+                    ), 400
+                
+            except json.JSONDecodeError as e:
+                return jsonify(
+                    error="Invalid subplot configuration JSON format",
+                    validation_errors=[{"field": "subplotConfig", "message": f"JSON decode error: {str(e)}"}]
+                ), 400
+        else:
+            # Fallback to individual flags for backward compatibility
+            show_rsi = request.form.get('showRSI', 'false') == 'true'
+            show_macd = request.form.get('showMACD', 'false') == 'true'
+            show_volume = request.form.get('showVolume', 'false') == 'true'
+            print(f"DEBUG: Using individual flags - RSI: {show_rsi}, MACD: {show_macd}, Volume: {show_volume}")
+
+        # Validate subplot configuration if provided using SubplotManager
+        if subplot_config:
+            from sub_plots import SubplotManager
+            subplot_manager = SubplotManager()
+            
+            requested_subplots = subplot_config.get('subplots', [])
+            validation_result = subplot_manager.validate_subplot_combination(requested_subplots)
+            
+            if not validation_result.valid:
+                # Return detailed conflict information to frontend
+                return jsonify(
+                    error="Subplot configuration conflicts detected",
+                    conflicts=validation_result.conflicts,
+                    suggestions=validation_result.suggestions,
+                    alternatives=validation_result.alternative_configs,
+                    max_subplots_exceeded=validation_result.max_subplots_exceeded,
+                    available_subplots=subplot_manager.get_available_subplots()
+                ), 400
+
         # Use StockPlotter to create the plot
-        result = stock_plotter.create_stock_plot(
-            ticker=ticker,
-            period=period,
-            chart_mode=chart_mode,
-            manual_fib=manual_fib,
-            show_extensions=show_extensions,
-            fib_high=fib_high,
-            moving_averages=moving_averages,
-            show_fib=show_fib,
-            include_financials=include_financials,  # Pass new param
-            elliott_points=elliott_points,  # Pass Elliott points
-            show_elliott_auto_waves=show_elliott_auto_waves,  # Pass Elliott auto-waves toggle
-            show_rsi=show_rsi,  # Pass RSI toggle
-            show_macd=show_macd,  # Pass MACD toggle
-            show_volume=show_volume,  # Pass Volume toggle
-            show_candlestick=show_candlestick,  # Pass Candlestick toggle
-            elliott_fib_levels=elliott_fib_levels  # Pass Elliott Wave enhancements
-        )
+        if subplot_config:
+            # Use unified configuration
+            result = stock_plotter.create_stock_plot(
+                ticker=ticker,
+                period=period,
+                chart_mode=chart_mode,
+                manual_fib=manual_fib,
+                show_extensions=show_extensions,
+                fib_high=fib_high,
+                moving_averages=moving_averages,
+                show_fib=show_fib,
+                include_financials=include_financials,
+                elliott_points=elliott_points,
+                show_elliott_auto_waves=show_elliott_auto_waves,
+                show_candlestick=show_candlestick,
+                elliott_fib_levels=elliott_fib_levels,
+                subplot_config=subplot_config  # Pass unified config
+            )
+        else:
+            # Use individual flags (backward compatibility)
+            result = stock_plotter.create_stock_plot(
+                ticker=ticker,
+                period=period,
+                chart_mode=chart_mode,
+                manual_fib=manual_fib,
+                show_extensions=show_extensions,
+                fib_high=fib_high,
+                moving_averages=moving_averages,
+                show_fib=show_fib,
+                include_financials=include_financials,
+                elliott_points=elliott_points,
+                show_elliott_auto_waves=show_elliott_auto_waves,
+                show_rsi=show_rsi,
+                show_macd=show_macd,
+                show_volume=show_volume,
+                show_candlestick=show_candlestick,
+                elliott_fib_levels=elliott_fib_levels
+            )
 
         # Convert figure to JSON
         graph_json = json.dumps(result['figure'], cls=plotly.utils.PlotlyJSONEncoder)
 
-        # Return all data
-        return jsonify(
-            graph=graph_json,
-            price=result['price_stats'],
-            financials=result['financial_metrics'],
-            priceTarget=result['price_target']
-        )
+        # Prepare enhanced response with layout metadata
+        response_data = {
+            'success': True,
+            'graph': graph_json,
+            'price': result['price_stats'],
+            'financials': result['financial_metrics'],
+            'priceTarget': result['price_target'],
+            'ticker': ticker,
+            'period': period
+        }
+
+        # Add layout metadata if available (from unified subplot configuration)
+        if 'layout_info' in result:
+            response_data['layoutInfo'] = {
+                'subplotRows': result['layout_info']['subplot_rows'],
+                'heightRatios': result['layout_info']['height_ratios'],
+                'totalRows': result['layout_info']['total_rows'],
+                'conflictsResolved': result['layout_info']['conflicts_resolved'],
+                'warnings': result['layout_info']['warnings'],
+                'priceChartDomain': result['layout_info'].get('price_chart_domain', [0.0, 1.0])
+            }
+
+        # Add validation result for successful requests with subplot config
+        if subplot_config:
+            response_data['validationResult'] = {
+                'valid': True,
+                'conflicts': [],
+                'warnings': result.get('layout_info', {}).get('warnings', [])
+            }
+
+        return jsonify(response_data)
 
     except ValueError as e:
-        return jsonify(error=str(e))
+        return jsonify(
+            error=f"Invalid parameter value: {str(e)}",
+            validation_errors=[{"field": "general", "message": str(e)}]
+        ), 400
     except Exception as e:
         print(f"Error in plot function: {str(e)}")
-        return jsonify(error=f"An error occurred: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify(
+            error=f"An error occurred while generating the chart: {str(e)}",
+            error_type="server_error"
+        ), 500
+
+
+def _validate_subplot_config_structure(subplot_config):
+    """
+    Validate the structure of the unified subplot configuration.
+    
+    Args:
+        subplot_config: The parsed subplot configuration dictionary
+        
+    Returns:
+        List of validation error dictionaries
+    """
+    validation_errors = []
+    
+    # Check if subplot_config is a dictionary
+    if not isinstance(subplot_config, dict):
+        validation_errors.append({
+            "field": "subplotConfig",
+            "message": "Subplot configuration must be a JSON object"
+        })
+        return validation_errors
+    
+    # Validate required fields
+    if 'subplots' not in subplot_config:
+        validation_errors.append({
+            "field": "subplotConfig.subplots",
+            "message": "Missing required field 'subplots'"
+        })
+    else:
+        # Validate subplots field
+        subplots = subplot_config['subplots']
+        if not isinstance(subplots, list):
+            validation_errors.append({
+                "field": "subplotConfig.subplots",
+                "message": "Field 'subplots' must be an array"
+            })
+        else:
+            # Validate each subplot name
+            for i, subplot in enumerate(subplots):
+                if not isinstance(subplot, str):
+                    validation_errors.append({
+                        "field": f"subplotConfig.subplots[{i}]",
+                        "message": f"Subplot name at index {i} must be a string"
+                    })
+                elif not subplot.strip():
+                    validation_errors.append({
+                        "field": f"subplotConfig.subplots[{i}]",
+                        "message": f"Subplot name at index {i} cannot be empty"
+                    })
+    
+    # Validate optional graph_settings field
+    if 'graph_settings' in subplot_config:
+        graph_settings = subplot_config['graph_settings']
+        if not isinstance(graph_settings, dict):
+            validation_errors.append({
+                "field": "subplotConfig.graph_settings",
+                "message": "Field 'graph_settings' must be an object"
+            })
+        else:
+            # Validate known graph settings
+            valid_settings = {'show_candlestick', 'show_graph_lines', 'show_time_selector'}
+            for setting, value in graph_settings.items():
+                if setting not in valid_settings:
+                    validation_errors.append({
+                        "field": f"subplotConfig.graph_settings.{setting}",
+                        "message": f"Unknown graph setting '{setting}'. Valid settings: {', '.join(valid_settings)}"
+                    })
+                elif not isinstance(value, bool):
+                    validation_errors.append({
+                        "field": f"subplotConfig.graph_settings.{setting}",
+                        "message": f"Graph setting '{setting}' must be a boolean value"
+                    })
+    
+    # Validate optional layout_preferences field
+    if 'layout_preferences' in subplot_config:
+        layout_prefs = subplot_config['layout_preferences']
+        if not isinstance(layout_prefs, dict):
+            validation_errors.append({
+                "field": "subplotConfig.layout_preferences",
+                "message": "Field 'layout_preferences' must be an object"
+            })
+        else:
+            # Validate known layout preferences
+            if 'max_subplots' in layout_prefs:
+                max_subplots = layout_prefs['max_subplots']
+                if not isinstance(max_subplots, int) or max_subplots < 1 or max_subplots > 10:
+                    validation_errors.append({
+                        "field": "subplotConfig.layout_preferences.max_subplots",
+                        "message": "Field 'max_subplots' must be an integer between 1 and 10"
+                    })
+            
+            if 'min_price_height' in layout_prefs:
+                min_price_height = layout_prefs['min_price_height']
+                if not isinstance(min_price_height, (int, float)) or min_price_height < 0.1 or min_price_height > 0.9:
+                    validation_errors.append({
+                        "field": "subplotConfig.layout_preferences.min_price_height",
+                        "message": "Field 'min_price_height' must be a number between 0.1 and 0.9"
+                    })
+    
+    return validation_errors
 
 
 # Application startup

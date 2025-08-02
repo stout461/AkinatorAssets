@@ -1,0 +1,31 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+pytz = "*"
+apscheduler = "*"
+yfinance = "*"
+matplotlib = "*"
+plotly = "*"
+flask = "*"
+xlsxwriter = "*"
+dotenv = "*"
+boto3 = "*"
+agent = "*"
+tool = "*"
+strands-agents = "*"
+filelock = "*"
+psycopg2 = "*"
+authlib = "*"
+auth = "*"
+flask-session = "*"
+stripe = "*"
+scipy = "*"
+psutil = "*"
+
+[dev-packages]
+
+[requires]
+python_version = "3.11"

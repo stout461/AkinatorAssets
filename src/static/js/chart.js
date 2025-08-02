@@ -4,6 +4,8 @@ console.log("✅ chart.js loaded");
 const DEFAULT_COLORS = ['#FF5733', '#33FFCC', '#FF33A6', '#3371FF', '#FFD633', '#4CAF50'];
 const API_ENDPOINT = '/plot';
 
+// Note: SettingsCoordinator is loaded from settings-coordinator.js
+
 // Sub-class: Base Mode Handler (Strategy Pattern)
 class BaseModeHandler {
     constructor(chart) {
@@ -36,7 +38,9 @@ class ElliottModeHandler extends BaseModeHandler {
         const clickedY = data.points[0].y.toFixed(2);
         this.chart.state.elliottPoints.push({ x: clickedX, y: clickedY });
         this.chart.ui.updateElliottDisplay(this.chart.state.elliottPoints);
-        this.chart.loadChartData(true); // Refresh chart
+        
+        // Update coordinated settings
+        this.chart.settingsCoordinator.updateSetting('elliottWave', 'points', [...this.chart.state.elliottPoints]);
     }
 }
 
@@ -47,20 +51,258 @@ class ChartUI {
         this.containerId = chart.containerId;
     }
 
-    showLoading() {
+    showLoading(message = 'Loading...') {
         $(`#${this.containerId}-loading, #chart-loading`).show();
+        // Update loading message if provided
+        $(`#${this.containerId}-loading .loading-message, #chart-loading .loading-message`).text(message);
     }
 
     hideLoading() {
         $(`#${this.containerId}-loading, #chart-loading`).hide();
     }
 
-    showError(message) {
-        $(`#${this.containerId}-error, #chart-error`).text(message).show();
+    showError(message, type = 'error', options = {}) {
+        const errorElement = $(`#${this.containerId}-error, #chart-error`);
+        
+        // Clear any existing error classes
+        errorElement.removeClass('alert-danger alert-warning alert-info alert-success');
+        
+        // Add appropriate class based on error type
+        switch (type) {
+            case 'warning':
+                errorElement.addClass('alert-warning');
+                break;
+            case 'info':
+                errorElement.addClass('alert-info');
+                break;
+            case 'success':
+                errorElement.addClass('alert-success');
+                break;
+            default:
+                errorElement.addClass('alert-danger');
+        }
+        
+        errorElement.text(message).show();
+        
+        // Auto-hide after specified duration
+        if (options.autoHide && options.duration) {
+            setTimeout(() => {
+                this.hideError();
+            }, options.duration);
+        }
     }
 
     hideError() {
         $(`#${this.containerId}-error, #chart-error`).hide();
+    }
+
+    /**
+     * Show loading state with progress indicator for complex operations
+     */
+    showProgressLoading(message, progress = 0) {
+        const loadingElement = $(`#${this.containerId}-loading, #chart-loading`);
+        
+        // Create or update progress bar
+        let progressBar = loadingElement.find('.progress-bar');
+        if (progressBar.length === 0) {
+            loadingElement.append(`
+                <div class="progress mt-2" style="height: 4px;">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                         role="progressbar" style="width: 0%"></div>
+                </div>
+            `);
+            progressBar = loadingElement.find('.progress-bar');
+        }
+        
+        // Update progress
+        progressBar.css('width', `${progress}%`);
+        
+        // Update message
+        loadingElement.find('.loading-message').text(message);
+        loadingElement.show();
+    }
+
+    /**
+     * Show conflict resolution dialog with suggested alternatives
+     */
+    showConflictDialog(conflicts, alternatives = [], onResolve = null) {
+        // Create modal dialog HTML
+        const modalId = `conflict-modal-${this.containerId}`;
+        const modalHtml = `
+            <div class="modal fade" id="${modalId}" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">
+                                <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+                                Configuration Conflicts Detected
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="alert alert-warning">
+                                <strong>The following conflicts were detected:</strong>
+                                <ul class="mt-2 mb-0">
+                                    ${conflicts.map(conflict => `<li>${conflict.message}</li>`).join('')}
+                                </ul>
+                            </div>
+                            
+                            ${alternatives.length > 0 ? `
+                                <h6>Suggested Solutions:</h6>
+                                <div class="list-group">
+                                    ${alternatives.map((alt, index) => `
+                                        <div class="list-group-item">
+                                            <div class="d-flex w-100 justify-content-between">
+                                                <h6 class="mb-1">Option ${index + 1}</h6>
+                                                <button class="btn btn-sm btn-outline-primary apply-alternative" 
+                                                        data-index="${index}">Apply</button>
+                                            </div>
+                                            <p class="mb-1">${alt.description}</p>
+                                            <small class="text-muted">
+                                                Subplots: ${alt.subplots.join(', ') || 'None'}
+                                            </small>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            ` : ''}
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                Keep Current Settings
+                            </button>
+                            ${alternatives.length > 0 ? `
+                                <button type="button" class="btn btn-primary" id="apply-first-alternative">
+                                    Apply Recommended Solution
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Remove existing modal if present
+        $(`#${modalId}`).remove();
+        
+        // Add modal to DOM
+        $('body').append(modalHtml);
+        
+        // Set up event handlers
+        const modal = $(`#${modalId}`);
+        
+        // Handle alternative application
+        modal.find('.apply-alternative').on('click', (e) => {
+            const index = parseInt($(e.target).data('index'));
+            const alternative = alternatives[index];
+            if (onResolve) {
+                onResolve(alternative);
+            }
+            modal.modal('hide');
+        });
+        
+        // Handle recommended solution
+        modal.find('#apply-first-alternative').on('click', () => {
+            if (alternatives.length > 0 && onResolve) {
+                onResolve(alternatives[0]);
+            }
+            modal.modal('hide');
+        });
+        
+        // Clean up modal after hiding
+        modal.on('hidden.bs.modal', () => {
+            modal.remove();
+        });
+        
+        // Show modal
+        modal.modal('show');
+    }
+
+    /**
+     * Show validation feedback for invalid configurations
+     */
+    showValidationFeedback(field, message, type = 'error') {
+        const fieldElement = $(`#${field}`);
+        const feedbackId = `${field}-feedback`;
+        
+        // Remove existing feedback
+        $(`#${feedbackId}`).remove();
+        fieldElement.removeClass('is-invalid is-valid');
+        
+        // Add new feedback
+        const feedbackClass = type === 'error' ? 'invalid-feedback' : 'valid-feedback';
+        const inputClass = type === 'error' ? 'is-invalid' : 'is-valid';
+        
+        fieldElement.addClass(inputClass);
+        fieldElement.after(`
+            <div id="${feedbackId}" class="${feedbackClass}">
+                ${message}
+            </div>
+        `);
+        
+        // Auto-clear after 5 seconds for non-error feedback
+        if (type !== 'error') {
+            setTimeout(() => {
+                this.clearValidationFeedback(field);
+            }, 5000);
+        }
+    }
+
+    /**
+     * Clear validation feedback for a field
+     */
+    clearValidationFeedback(field) {
+        const fieldElement = $(`#${field}`);
+        const feedbackId = `${field}-feedback`;
+        
+        $(`#${feedbackId}`).remove();
+        fieldElement.removeClass('is-invalid is-valid');
+    }
+
+    /**
+     * Show toast notification for quick feedback
+     */
+    showToast(message, type = 'info', duration = 3000) {
+        const toastId = `toast-${Date.now()}`;
+        const toastClass = {
+            'success': 'bg-success',
+            'error': 'bg-danger',
+            'warning': 'bg-warning',
+            'info': 'bg-info'
+        }[type] || 'bg-info';
+        
+        const toastHtml = `
+            <div id="${toastId}" class="toast align-items-center text-white ${toastClass} border-0" 
+                 role="alert" aria-live="assertive" aria-atomic="true">
+                <div class="d-flex">
+                    <div class="toast-body">
+                        ${message}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" 
+                            data-bs-dismiss="toast"></button>
+                </div>
+            </div>
+        `;
+        
+        // Create toast container if it doesn't exist
+        if ($('#toast-container').length === 0) {
+            $('body').append(`
+                <div id="toast-container" class="toast-container position-fixed top-0 end-0 p-3" 
+                     style="z-index: 1055;"></div>
+            `);
+        }
+        
+        // Add toast
+        $('#toast-container').append(toastHtml);
+        
+        // Show toast
+        const toastElement = $(`#${toastId}`);
+        const toast = new bootstrap.Toast(toastElement[0], { delay: duration });
+        toast.show();
+        
+        // Clean up after hiding
+        toastElement.on('hidden.bs.toast', () => {
+            toastElement.remove();
+        });
     }
 
     updateElliottDisplay(points) {
@@ -265,6 +507,10 @@ class StockChart {
         this.mode = mode; // 'compact' or 'detailed'
         this.ui = new ChartUI(this);
         this.state = new ChartStateManager();
+        
+        // Initialize SettingsCoordinator for unified settings management
+        this.settingsCoordinator = new SettingsCoordinator(this);
+        
         this.modes = { // Strategy map for interactive modes
             fib: new FibModeHandler(this),
             trendlines: new TrendlineModeHandler(this),
@@ -276,8 +522,106 @@ class StockChart {
 
     init() {
         this.setupEventListeners();
+        this.setupSettingsCoordination();
         this.initializeGraphSettings();
         console.log(`📊 StockChart initialized in ${this.mode} mode for container: ${this.containerId}`);
+    }
+
+    setupSettingsCoordination() {
+        // Set up event listeners for coordinated settings management
+        this.settingsCoordinator.addEventListener('settingChanged', (data) => {
+            this.handleCoordinatedSettingChange(data);
+        });
+
+        this.settingsCoordinator.addEventListener('multipleSettingsChanged', (data) => {
+            this.handleMultipleSettingsChange(data);
+        });
+
+        this.settingsCoordinator.addEventListener('validationError', (data) => {
+            this.handleSettingsValidationError(data);
+        });
+
+        this.settingsCoordinator.addEventListener('conflictError', (data) => {
+            this.handleSettingsConflictError(data);
+        });
+
+        // Sync initial settings with DOM
+        this.settingsCoordinator.syncWithDOM();
+        
+        console.log('📊 Settings coordination configured');
+    }
+
+    handleCoordinatedSettingChange(data) {
+        const { category, key, newValue, oldValue } = data;
+        
+        // Update DOM elements if needed
+        this.syncSettingToDOM(category, key, newValue);
+        
+        // Update visual indicators
+        if (category === 'subplots') {
+            this.ui.updateIndicatorVisualState();
+        }
+        
+        // Refresh chart if setting affects visualization
+        if (this.shouldRefreshChart(category, key)) {
+            this.loadChartData(true);
+        }
+        
+        console.log(`📊 Coordinated setting change: ${category}.${key} = ${newValue}`);
+    }
+
+    handleMultipleSettingsChange(data) {
+        // Handle multiple settings changes efficiently
+        this.settingsCoordinator.syncWithDOM();
+        this.ui.updateIndicatorVisualState();
+        this.loadChartData(true);
+        
+        console.log('📊 Multiple coordinated settings changed');
+    }
+
+    handleSettingsValidationError(data) {
+        console.warn('Settings validation error:', data);
+        // Error message is already shown by SettingsCoordinator
+    }
+
+    handleSettingsConflictError(data) {
+        console.warn('Settings conflict error:', data);
+        // Error message is already shown by SettingsCoordinator
+    }
+
+    syncSettingToDOM(category, key, value) {
+        // Sync specific setting changes back to DOM elements
+        if (category === 'subplots') {
+            $(`#${key}`).prop('checked', value);
+        } else if (category === 'graphSettings') {
+            const domId = this.mapSettingToDOMId(key);
+            if (domId) {
+                $(`#${domId}`).prop('checked', value);
+            }
+        } else if (category === 'analysisMode') {
+            $(`input[name="analysisMode"][value="${value}"]`).prop('checked', true);
+        }
+    }
+
+    mapSettingToDOMId(settingKey) {
+        const mapping = {
+            'showCandlestick': 'showCandlestick',
+            'showGraphLines': 'showGraphLines',
+            'showTimeSelector': 'showTimeSelector'
+        };
+        return mapping[settingKey];
+    }
+
+    shouldRefreshChart(category, key) {
+        // Determine if a setting change requires chart refresh
+        const refreshTriggers = [
+            'subplots',
+            'graphSettings',
+            'fibonacciSettings',
+            'movingAverages',
+            'elliottWave'
+        ];
+        return refreshTriggers.includes(category);
     }
 
     // ========================================
@@ -323,13 +667,16 @@ class StockChart {
         const ticker = $('#ticker').val().trim();
         const period = $('input[name="period"]:checked').val();
         const chartMode = this.getChartClickMode();
+        
+        // Get unified subplot configuration from SettingsCoordinator
+        const subplotConfig = this.settingsCoordinator.generateUnifiedSubplotConfig();
+        
         // Fibonacci settings - Always send if configured (persist across modes)
+        const fibSettings = this.settingsCoordinator.getSetting('fibonacciSettings');
         const manualFib = $('#manualFibMode').is(':checked');
         const showExtensions = $('#showExtensions').is(':checked');
         const fibHigh = $('#fibHighValue').val();
         const showFib = $('#showFib').is(':checked');
-        const showVolume = $('#showVolume').is(':checked');
-        const showCandlestick = $('#showCandlestick').is(':checked');
 
         // Moving Averages - Always send if configured (persist across modes)
         const selectedMAs = this.getSelectedMovingAverages();
@@ -342,15 +689,12 @@ class StockChart {
         // Elliott Wave Auto-generation toggle
         const showElliottAutoWaves = $('#show-elliott-auto-waves').is(':checked');
 
-        // NEW: Technical Indicators
-        const showRSI = $('#showRSI').is(':checked');
-        const showMACD = $('#showMACD').is(':checked');
-
         // Include mode-specific params if any
         const modeHandler = this.modes[chartMode];
         const modeParams = modeHandler ? modeHandler.getParams() : {};
 
-        return {
+        // Build parameters object with unified subplot configuration
+        const params = {
             ticker,
             period,
             chartMode,
@@ -361,12 +705,23 @@ class StockChart {
             showFib,
             elliott_points: elliottPointsParam,
             show_elliott_auto_waves: showElliottAutoWaves,
-            showRSI: showRSI,
-            showMACD: showMACD,
-            showVolume: showVolume,
-            showCandlestick: showCandlestick,
             ...modeParams
         };
+
+        // Add unified subplot configuration if subplots are active
+        if (subplotConfig.subplots.length > 0 || 
+            subplotConfig.graph_settings.show_candlestick || 
+            subplotConfig.graph_settings.show_time_selector) {
+            params.subplotConfig = JSON.stringify(subplotConfig);
+        } else {
+            // Fallback to individual flags for backward compatibility
+            params.showRSI = this.settingsCoordinator.getSetting('subplots', 'showRSI');
+            params.showMACD = this.settingsCoordinator.getSetting('subplots', 'showMACD');
+            params.showVolume = this.settingsCoordinator.getSetting('subplots', 'showVolume');
+            params.showCandlestick = this.settingsCoordinator.getSetting('graphSettings', 'showCandlestick');
+        }
+
+        return params;
     }
 
     // ========================================
@@ -395,9 +750,21 @@ class StockChart {
 
             this.ui.hideLoading();
 
+            // Handle API response conflicts and validation errors
             if (response.error) {
-                this.ui.showError('Chart Error: ' + response.error);
+                this.handleAPIError(response);
                 return;
+            }
+
+            // Handle subplot configuration conflicts from backend
+            if (response.conflicts && response.conflicts.length > 0) {
+                this.handleBackendConflicts(response);
+                return;
+            }
+
+            // Update settings from successful API response
+            if (response.layoutInfo) {
+                this.handleLayoutInfoUpdate(response.layoutInfo);
             }
 
             // Render the chart
@@ -408,8 +775,103 @@ class StockChart {
 
         } catch (error) {
             this.ui.hideLoading();
-            this.ui.showError('Chart request failed. Please try again.');
+            
+            // Enhanced error handling for different types of failures
+            if (error.status === 400 && error.responseJSON) {
+                this.handleValidationError(error.responseJSON);
+            } else {
+                this.ui.showError('Chart request failed. Please try again.');
+            }
             throw error;
+        }
+    }
+
+    /**
+     * Handle API errors with intelligent user feedback
+     */
+    handleAPIError(response) {
+        let errorMessage = response.error;
+        
+        // Provide more specific error messages based on error type
+        if (response.error_type === 'server_error') {
+            errorMessage = 'Server error occurred. Please try again in a moment.';
+        } else if (response.validation_errors && response.validation_errors.length > 0) {
+            errorMessage = response.validation_errors[0].message;
+        }
+        
+        this.ui.showError(errorMessage);
+        console.error('API Error:', response);
+    }
+
+    /**
+     * Handle backend subplot conflicts with user-friendly resolution options
+     */
+    handleBackendConflicts(response) {
+        const conflicts = response.conflicts;
+        const suggestions = response.suggestions || [];
+        const alternatives = response.alternatives || [];
+        
+        console.warn('Backend conflicts detected:', conflicts);
+        
+        // Show conflict resolution dialog if alternatives are available
+        if (alternatives.length > 0) {
+            this.ui.showConflictDialog(conflicts, alternatives, (selectedAlternative) => {
+                console.log('User selected alternative:', selectedAlternative);
+                
+                // Update settings with the selected alternative configuration
+                this.settingsCoordinator.updateFromUnifiedConfig({
+                    subplots: selectedAlternative.subplots,
+                    graph_settings: this.settingsCoordinator.getSetting('graphSettings')
+                });
+                
+                // Show success feedback
+                this.ui.showToast(`Applied: ${selectedAlternative.description}`, 'success', 4000);
+                
+                // Refresh chart with new configuration
+                this.loadChartData(true);
+            });
+        } else {
+            // Fallback to simple error message if no alternatives
+            let conflictMessage = 'Subplot configuration conflicts detected. ';
+            if (suggestions.length > 0) {
+                conflictMessage += suggestions[0];
+            }
+            this.ui.showError(conflictMessage, 'warning');
+        }
+    }
+
+    /**
+     * Handle validation errors from API with detailed feedback
+     */
+    handleValidationError(errorResponse) {
+        if (errorResponse.conflicts && errorResponse.conflicts.length > 0) {
+            this.handleBackendConflicts(errorResponse);
+        } else if (errorResponse.validation_errors && errorResponse.validation_errors.length > 0) {
+            const firstError = errorResponse.validation_errors[0];
+            this.ui.showError(`Validation Error: ${firstError.message}`);
+        } else {
+            this.ui.showError(errorResponse.error || 'Validation failed');
+        }
+    }
+
+    /**
+     * Handle layout info updates from successful API responses
+     */
+    handleLayoutInfoUpdate(layoutInfo) {
+        // Log layout information for debugging
+        console.log('Layout info received:', layoutInfo);
+        
+        // Show warnings if any conflicts were resolved
+        if (layoutInfo.conflictsResolved && layoutInfo.conflictsResolved.length > 0) {
+            const resolvedMessage = `Conflicts resolved: ${layoutInfo.conflictsResolved.join(', ')}`;
+            console.warn(resolvedMessage);
+        }
+        
+        // Show warnings from backend
+        if (layoutInfo.warnings && layoutInfo.warnings.length > 0) {
+            layoutInfo.warnings.forEach(warning => {
+                console.warn('Backend warning:', warning);
+            });
         }
     }
 
@@ -656,36 +1118,49 @@ class StockChart {
     }
 
     setupFibListeners() {
-        $('#manualFibMode').on('change', () => {
-            if (!$('#manualFibMode').is(':checked')) {
+        $('#manualFibMode').on('change', (e) => {
+            const enabled = $(e.target).is(':checked');
+            this.settingsCoordinator.updateSetting('fibonacciSettings', 'manualMode', enabled);
+            if (!enabled) {
                 $('#fibHighValue').val('');
+                this.settingsCoordinator.updateSetting('fibonacciSettings', 'fibHigh', '');
             }
-            this.loadChartData(true);
         });
 
-        $('#showExtensions, #showFib').on('change', () => {
-            this.loadChartData(true);
+        $('#showExtensions').on('change', (e) => {
+            const enabled = $(e.target).is(':checked');
+            this.settingsCoordinator.updateSetting('fibonacciSettings', 'showExtensions', enabled);
         });
 
-        $('#fibHighValue').on('change', () => {
-            if ($('#fibHighValue').val()) {
-                this.loadChartData(true);
-            }
+        $('#showFib').on('change', (e) => {
+            const enabled = $(e.target).is(':checked');
+            this.settingsCoordinator.updateSetting('fibonacciSettings', 'showFib', enabled);
+        });
+
+        $('#fibHighValue').on('change', (e) => {
+            const value = $(e.target).val();
+            this.settingsCoordinator.updateSetting('fibonacciSettings', 'fibHigh', value);
         });
     }
 
     setupMAListeners() {
-        $('.ma-checkbox').change(() => {
-            this.loadChartData(true);
+        // Standard MA checkboxes - use coordinated settings
+        $('.ma-checkbox').change((e) => {
+            const selectedMAs = [];
+            $('.ma-checkbox:checked').each(function () {
+                selectedMAs.push(parseInt($(this).val()));
+            });
+            this.settingsCoordinator.updateSetting('movingAverages', 'standardMAs', selectedMAs);
         });
 
-        // Custom MA management
+        // Custom MA management - integrate with coordinated settings
         $('#add-custom-ma').click(() => {
             const period = parseInt($('#custom-ma-input').val());
             if (this.state.addCustomMovingAverage(period)) {
                 $('#custom-ma-input').val('');
                 this.ui.updateCustomMADisplay(this.state.customMAs);
-                this.loadChartData(true);
+                // Update coordinated settings
+                this.settingsCoordinator.updateSetting('movingAverages', 'customMAs', [...this.state.customMAs]);
             }
         });
 
@@ -695,80 +1170,126 @@ class StockChart {
             }
         });
 
-        // Remove custom MA
+        // Remove custom MA - integrate with coordinated settings
         $(document).on('click', '.remove-custom-ma', (e) => {
             const period = parseInt($(e.currentTarget).data('period'));
             if (this.state.removeCustomMovingAverage(period)) {
                 this.ui.updateCustomMADisplay(this.state.customMAs);
-                this.loadChartData(true);
+                // Update coordinated settings
+                this.settingsCoordinator.updateSetting('movingAverages', 'customMAs', [...this.state.customMAs]);
             }
         });
 
-        // MA presets
+        // MA presets - use coordinated settings for atomic updates
         $('#ma-preset-none').click(() => {
+            const updates = {
+                'movingAverages.standardMAs': []
+            };
+            this.settingsCoordinator.updateMultipleSettings(updates);
+            // Update DOM to reflect changes
             $('.ma-checkbox').prop('checked', false);
-            this.loadChartData(true);
         });
 
         $('#ma-preset-basic').click(() => {
+            const updates = {
+                'movingAverages.standardMAs': [20, 50]
+            };
+            this.settingsCoordinator.updateMultipleSettings(updates);
+            // Update DOM to reflect changes
             $('.ma-checkbox').prop('checked', false);
             $('#ma-20, #ma-50').prop('checked', true);
-            this.loadChartData(true);
         });
 
         $('#ma-preset-extended').click(() => {
+            const updates = {
+                'movingAverages.standardMAs': [20, 50, 200]
+            };
+            this.settingsCoordinator.updateMultipleSettings(updates);
+            // Update DOM to reflect changes
             $('.ma-checkbox').prop('checked', false);
             $('#ma-20, #ma-50, #ma-200').prop('checked', true);
-            this.loadChartData(true);
         });
 
         $('#ma-preset-day-trading').click(() => {
+            const updates = {
+                'movingAverages.standardMAs': [5, 10, 20]
+            };
+            this.settingsCoordinator.updateMultipleSettings(updates);
+            // Update DOM to reflect changes
             $('.ma-checkbox').prop('checked', false);
             $('#ma-5, #ma-10, #ma-20').prop('checked', true);
-            this.loadChartData(true);
         });
     }
 
     setupElliottListeners() {
-        // Remove Elliott point
+        // Remove Elliott point - integrate with coordinated settings
         $(document).on('click', '.remove-point', (e) => {
             const index = parseInt($(e.currentTarget).data('index'));
             this.state.elliottPoints.splice(index, 1);
             this.ui.updateElliottDisplay(this.state.elliottPoints);
-            this.loadChartData(true);
+            // Update coordinated settings
+            this.settingsCoordinator.updateSetting('elliottWave', 'points', [...this.state.elliottPoints]);
         });
 
         $('#clear-elliott-points').click(() => {
             this.state.elliottPoints = [];
             this.ui.updateElliottDisplay(this.state.elliottPoints);
-            this.loadChartData(true);
+            // Update coordinated settings
+            this.settingsCoordinator.updateSetting('elliottWave', 'points', []);
         });
 
-        // Elliott wave enhancements
-        $('#show-elliott-fib-levels, #extend-elliott-projections').on('change', () => {
-            this.loadChartData(true);
+        // Elliott wave enhancements - use coordinated settings
+        $('#show-elliott-fib-levels').on('change', (e) => {
+            const enabled = $(e.target).is(':checked');
+            this.settingsCoordinator.updateSetting('elliottWave', 'showFibLevels', enabled);
         });
 
-        // Elliott wave auto-generation toggle
-        $('#show-elliott-auto-waves').on('change', () => {
-            this.loadChartData(true);
+        $('#extend-elliott-projections').on('change', (e) => {
+            const enabled = $(e.target).is(':checked');
+            this.settingsCoordinator.updateSetting('elliottWave', 'extendProjections', enabled);
+        });
+
+        // Elliott wave auto-generation toggle - use coordinated settings
+        $('#show-elliott-auto-waves').on('change', (e) => {
+            const enabled = $(e.target).is(':checked');
+            this.settingsCoordinator.updateSetting('elliottWave', 'showAutoWaves', enabled);
         });
     }
 
     setupIndicatorListeners() {
-        $('#showRSI, #showMACD, #showVolume, #showCandlestick').on('change', () => {
-            this.ui.updateIndicatorVisualState();
-            this.loadChartData(true);
+        // Use coordinated settings for subplot indicators
+        $('#showRSI').on('change', (e) => {
+            const enabled = $(e.target).is(':checked');
+            this.settingsCoordinator.updateSetting('subplots', 'showRSI', enabled);
         });
 
-        // Graph Settings listeners
-        $('#showGraphLines').on('change', () => {
-            const enabled = $('#showGraphLines').is(':checked');
+        $('#showMACD').on('change', (e) => {
+            const enabled = $(e.target).is(':checked');
+            this.settingsCoordinator.updateSetting('subplots', 'showMACD', enabled);
+        });
+
+        $('#showVolume').on('change', (e) => {
+            const enabled = $(e.target).is(':checked');
+            this.settingsCoordinator.updateSetting('subplots', 'showVolume', enabled);
+        });
+
+        $('#showCandlestick').on('change', (e) => {
+            const enabled = $(e.target).is(':checked');
+            this.settingsCoordinator.updateSetting('graphSettings', 'showCandlestick', enabled);
+        });
+
+        // Graph Settings listeners with coordinated settings
+        $('#showGraphLines').on('change', (e) => {
+            const enabled = $(e.target).is(':checked');
+            this.settingsCoordinator.updateSetting('graphSettings', 'showGraphLines', enabled);
+            // Apply immediately for visual feedback
             this.toggleGraphLines(enabled);
         });
 
-        $('#showTimeSelector').on('change', () => {
-            const enabled = $('#showTimeSelector').is(':checked');
+        $('#showTimeSelector').on('change', (e) => {
+            const enabled = $(e.target).is(':checked');
+            this.settingsCoordinator.updateSetting('graphSettings', 'showTimeSelector', enabled);
+            // Apply immediately for visual feedback
             this.toggleTimeSelector(enabled);
         });
     }
@@ -790,28 +1311,27 @@ class StockChart {
     }
 
     handleModeChange(analysisMode) {
+        // Update analysis mode in coordinated settings
+        this.settingsCoordinator.updateSetting('analysisMode', null, analysisMode);
+        
         // Handle mode-specific logic - RSI, MACD, Volume, and Candlestick work as independent toggles
         if (analysisMode === 'rsi') {
             // Toggle RSI indicator when RSI mode is selected (don't affect others)
-            const currentRSI = $('#showRSI').is(':checked');
-            $('#showRSI').prop('checked', !currentRSI);
+            const currentRSI = this.settingsCoordinator.getSetting('subplots', 'showRSI');
+            this.settingsCoordinator.updateSetting('subplots', 'showRSI', !currentRSI);
         } else if (analysisMode === 'macd') {
             // Toggle MACD indicator when MACD mode is selected (don't affect others)
-            const currentMACD = $('#showMACD').is(':checked');
-            $('#showMACD').prop('checked', !currentMACD);
+            const currentMACD = this.settingsCoordinator.getSetting('subplots', 'showMACD');
+            this.settingsCoordinator.updateSetting('subplots', 'showMACD', !currentMACD);
         } else if (analysisMode === 'volume') {
             // Toggle Volume indicator when Volume mode is selected
-            const currentVolume = $('#showVolume').is(':checked');
-            $('#showVolume').prop('checked', !currentVolume);
+            const currentVolume = this.settingsCoordinator.getSetting('subplots', 'showVolume');
+            this.settingsCoordinator.updateSetting('subplots', 'showVolume', !currentVolume);
         }
         // For other modes (fib, trendlines, elliott, ma), don't change indicator settings
         // This allows all indicators to persist across all modes
 
-        // Update visual indicator state after changing checkboxes
-        this.ui.updateIndicatorVisualState();
-
-        // Refresh chart with new mode settings
-        this.loadChartData(true);
+        // Note: Chart refresh and visual updates are handled by the coordinated settings system
     }
 
     // ========================================
@@ -843,6 +1363,10 @@ class StockChart {
 
     setChartMode(mode) {
         $(`input[name="analysisMode"][value="${mode}"]`).prop('checked', true).trigger('change');
+    }
+
+    toggleSettings() {
+        this.ui.toggleSettings();
     }
 
     getChartState() {

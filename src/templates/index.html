@@ -501,6 +501,15 @@
         $(document).ready(function () {
             // Initialize the compact chart for the dashboard
             window.dashboardChart = new StockChart('graph', 'compact');
+            
+            // Apply dark mode styling to empty chart container immediately
+            if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                const chartContainer = document.getElementById('graph');
+                if (chartContainer) {
+                    chartContainer.style.backgroundColor = '#1f2937';
+                    chartContainer.style.border = '1px solid rgba(255, 255, 255, 0.1)';
+                }
+            }
 
             // Override navigation methods for dashboard context
             window.dashboardChart.navigateToDetailed = function () {

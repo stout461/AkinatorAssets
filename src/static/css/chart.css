@@ -15,6 +15,8 @@
     background-color: #ffffff;
     border-radius: 8px;
     overflow: visible; /* Allow content to be visible */
+    border: 1px solid #e9ecef;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 /* Compact mode (dashboard) */
@@ -1263,6 +1265,449 @@
 
 .settings-section > div[style*="display: block"] {
     opacity: 1;
+}
+
+/* ========================================
+   DARK MODE STYLES
+   ======================================== */
+
+/* Dark mode for Plotly chart elements */
+@media (prefers-color-scheme: dark) {
+    /* Ensure chart containers get dark styling immediately on page load */
+    body .chart-container,
+    body #graph,
+    body #detailed-graph,
+    .container-fluid #graph,
+    .container-fluid .chart-container {
+        background-color: #1f2937 !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    }
+    
+    /* Extra specificity for main page */
+    html body .container-fluid #graph {
+        background-color: #1f2937 !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    }
+    
+    /* FINAL OVERRIDE: Maximum specificity for main page chart */
+    html body div.container-fluid div#graph.chart-container,
+    html body div.container-fluid div#graph,
+    html body .container-fluid .chart-container.compact-chart {
+        background-color: #1f2937 !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        color: #f1f5f9 !important;
+    }
+
+    /* Target Plotly legend specifically */
+    .js-plotly-plot .legend {
+        background-color: rgba(30, 30, 30, 0.95) !important;
+        border-color: rgba(255, 255, 255, 0.2) !important;
+        color: white !important;
+    }
+    
+    .js-plotly-plot .legend text {
+        fill: white !important;
+    }
+    
+    /* Target Plotly hover tooltips */
+    .js-plotly-plot .hovertext {
+        background-color: rgba(20, 20, 20, 0.95) !important;
+        border-color: rgba(255, 255, 255, 0.3) !important;
+        color: white !important;
+    }
+    
+    .js-plotly-plot .hovertext text {
+        fill: white !important;
+    }
+    
+    /* Hover box styling */
+    .js-plotly-plot .hoverlayer .hovertext {
+        background: rgba(20, 20, 20, 0.95) !important;
+        border: 1px solid rgba(255, 255, 255, 0.3) !important;
+        color: white !important;
+        font-family: Arial, sans-serif !important;
+        font-size: 13px !important;
+    }
+    
+    /* Hover box text elements */
+    .js-plotly-plot .hoverlayer .hovertext .name,
+    .js-plotly-plot .hoverlayer .hovertext .nums {
+        color: white !important;
+    }
+    
+    /* Legend background and text */
+    .js-plotly-plot .legend .bg {
+        fill: rgba(30, 30, 30, 0.95) !important;
+        stroke: rgba(255, 255, 255, 0.2) !important;
+    }
+    
+    .js-plotly-plot .legend .legendtext {
+        fill: white !important;
+    }
+    
+    /* Unified hover mode styling */
+    .js-plotly-plot .hoverlayer .spikeline {
+        stroke: rgba(255, 255, 255, 0.5) !important;
+    }
+    
+    /* Hover info box */
+    .js-plotly-plot .hoverlayer .hovertext rect {
+        fill: rgba(20, 20, 20, 0.95) !important;
+        stroke: rgba(255, 255, 255, 0.3) !important;
+    }
+}
+
+/* Dark mode for settings panel and components */
+@media (prefers-color-scheme: dark) {
+    /* Main settings panel */
+    #chart-settings {
+        background: linear-gradient(135deg, #1f2937 0%, #111827 100%) !important;
+        border-color: rgba(255, 255, 255, 0.1) !important;
+        color: #f3f4f6 !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+    }
+
+    /* Settings sections */
+    .settings-section {
+        background: #374151 !important;
+        border-color: rgba(255, 255, 255, 0.1) !important;
+        color: #f3f4f6 !important;
+    }
+
+    .settings-section:hover {
+        border-color: #0ac775 !important;
+        box-shadow: 0 2px 6px rgba(10, 199, 117, 0.2) !important;
+    }
+
+    /* Display settings section */
+    .settings-section.display-section {
+        background: linear-gradient(135deg, #374151 0%, #4b5563 100%) !important;
+        border-color: #0ac775 !important;
+    }
+
+    /* Section headers */
+    .section-header {
+        background: linear-gradient(135deg, #0ac775 0%, #0cbf72 100%) !important;
+        color: white !important;
+    }
+
+    /* Section content */
+    .section-content {
+        background: transparent !important;
+        color: #f3f4f6 !important;
+    }
+
+    /* Toggle switches */
+    .toggle-text,
+    .toggle-label {
+        color: #f3f4f6 !important;
+    }
+
+    .toggle-slider-mini {
+        background-color: #4b5563 !important;
+    }
+
+    .compact-toggle input:checked + .toggle-slider-mini {
+        background-color: #0ac775 !important;
+    }
+
+    .toggle-slider {
+        background-color: #4b5563 !important;
+    }
+
+    .toggle-switch input:checked + .toggle-slider {
+        background-color: #0ac775 !important;
+    }
+
+    /* Mode tabs */
+    .mode-tab {
+        background: #4b5563 !important;
+        border-color: rgba(255, 255, 255, 0.1) !important;
+        color: #f3f4f6 !important;
+    }
+
+    .mode-tab:hover {
+        border-color: #0ac775 !important;
+        background-color: rgba(10, 199, 117, 0.1) !important;
+    }
+
+    .mode-tabs input:checked + .mode-tab {
+        border-color: #0ac775 !important;
+        background-color: rgba(10, 199, 117, 0.2) !important;
+        color: #0ac775 !important;
+    }
+
+    /* Mode buttons */
+    .mode-btn {
+        background: #4b5563 !important;
+        border-color: rgba(255, 255, 255, 0.1) !important;
+        color: #f3f4f6 !important;
+    }
+
+    .mode-btn:hover {
+        border-color: #0ac775 !important;
+        background-color: rgba(10, 199, 117, 0.1) !important;
+    }
+
+    .mode-selector input:checked + .mode-btn {
+        border-color: #0ac775 !important;
+        background-color: rgba(10, 199, 117, 0.2) !important;
+        color: #0ac775 !important;
+    }
+
+    /* Inputs and selects */
+    .compact-input,
+    .compact-select {
+        background: #4b5563 !important;
+        border-color: rgba(255, 255, 255, 0.2) !important;
+        color: #f3f4f6 !important;
+    }
+
+    .compact-input:focus,
+    .compact-select:focus {
+        border-color: #0ac775 !important;
+        background-color: #374151 !important;
+    }
+
+    .compact-input.highlight-input {
+        border-color: #0ac775 !important;
+        background-color: rgba(10, 199, 117, 0.2) !important;
+    }
+
+    /* Buttons */
+    .compact-btn,
+    .preset-btn,
+    .preset-btn-mini {
+        background: #4b5563 !important;
+        border-color: rgba(255, 255, 255, 0.2) !important;
+        color: #f3f4f6 !important;
+    }
+
+    .compact-btn:hover,
+    .preset-btn:hover,
+    .preset-btn-mini:hover {
+        border-color: #0ac775 !important;
+        background-color: rgba(10, 199, 117, 0.1) !important;
+        color: #0ac775 !important;
+    }
+
+    /* Moving average toggles */
+    .ma-toggle,
+    .ma-toggle-mini {
+        background: #4b5563 !important;
+        border-color: rgba(255, 255, 255, 0.1) !important;
+        color: #f3f4f6 !important;
+    }
+
+    .ma-toggle:hover,
+    .ma-toggle-mini:hover {
+        border-color: #0ac775 !important;
+        background-color: rgba(10, 199, 117, 0.1) !important;
+    }
+
+    .ma-toggle input:checked ~ span:last-child,
+    .ma-toggle-mini input:checked ~ span {
+        color: #0ac775 !important;
+    }
+
+    /* Elliott points display */
+    .points-grid {
+        background-color: #374151 !important;
+        border-color: rgba(255, 255, 255, 0.1) !important;
+    }
+
+    .points-grid:empty::before {
+        color: #9ca3af !important;
+    }
+
+    .elliott-point-chip {
+        background-color: #4b5563 !important;
+        border-color: rgba(255, 255, 255, 0.1) !important;
+        color: #f3f4f6 !important;
+    }
+
+    .elliott-point-chip:hover {
+        background-color: #374151 !important;
+        border-color: #0ac775 !important;
+    }
+
+    .elliott-point-chip .point-label {
+        color: #0ac775 !important;
+    }
+
+    .elliott-point-chip .point-value {
+        color: #f3f4f6 !important;
+    }
+
+    /* Points list */
+    .points-list {
+        background-color: #374151 !important;
+        border-color: rgba(255, 255, 255, 0.1) !important;
+    }
+
+    .points-list:empty::before {
+        color: #9ca3af !important;
+    }
+
+    .points-list li {
+        background-color: #4b5563 !important;
+        border-color: rgba(255, 255, 255, 0.1) !important;
+        color: #f3f4f6 !important;
+    }
+
+    .points-list li:hover {
+        background-color: #374151 !important;
+        border-color: #0ac775 !important;
+    }
+
+    /* Custom MA tags */
+    .custom-ma-tag {
+        background-color: #4b5563 !important;
+        border-color: rgba(255, 255, 255, 0.2) !important;
+        color: #f3f4f6 !important;
+    }
+
+    .custom-ma-tags-mini {
+        color: #f3f4f6 !important;
+    }
+
+    /* Help text and info */
+    .fib-help-text,
+    .points-help,
+    .mode-help,
+    .info-text {
+        color: #d1d5db !important;
+    }
+
+    .points-count {
+        color: #9ca3af !important;
+    }
+
+    /* Level indicators */
+    .level-indicator.overbought {
+        background-color: rgba(220, 53, 69, 0.2) !important;
+        border-color: rgba(220, 53, 69, 0.4) !important;
+    }
+
+    .level-indicator.oversold {
+        background-color: rgba(40, 167, 69, 0.2) !important;
+        border-color: rgba(40, 167, 69, 0.4) !important;
+    }
+
+    /* Component indicators */
+    .component-indicator.macd-line {
+        background-color: rgba(33, 150, 243, 0.2) !important;
+        border-color: rgba(33, 150, 243, 0.4) !important;
+    }
+
+    .component-indicator.signal-line {
+        background-color: rgba(255, 87, 34, 0.2) !important;
+        border-color: rgba(255, 87, 34, 0.4) !important;
+    }
+
+    .component-indicator.histogram {
+        background-color: rgba(76, 175, 80, 0.2) !important;
+        border-color: rgba(76, 175, 80, 0.4) !important;
+    }
+
+    .component-indicator.volume-up {
+        background-color: rgba(34, 197, 94, 0.2) !important;
+        border-color: rgba(34, 197, 94, 0.4) !important;
+    }
+
+    .component-indicator.volume-down {
+        background-color: rgba(239, 68, 68, 0.2) !important;
+        border-color: rgba(239, 68, 68, 0.4) !important;
+    }
+
+    .component-indicator.candle-up {
+        background-color: rgba(34, 197, 94, 0.2) !important;
+        border-color: rgba(34, 197, 94, 0.4) !important;
+    }
+
+    .component-indicator.candle-down {
+        background-color: rgba(239, 68, 68, 0.2) !important;
+        border-color: rgba(239, 68, 68, 0.4) !important;
+    }
+
+    /* Chart controls */
+    .chart-header {
+        border-bottom-color: rgba(255, 255, 255, 0.1) !important;
+    }
+
+    .chart-title {
+        color: #0ac775 !important;
+    }
+
+    /* Settings toggle button */
+    #chart-settings-toggle {
+        background-color: #4b5563 !important;
+        border-color: #4b5563 !important;
+        color: #f3f4f6 !important;
+    }
+
+    #chart-settings-toggle:hover {
+        background-color: #374151 !important;
+        border-color: #374151 !important;
+    }
+
+    /* Navigation buttons */
+    .chart-nav-btn.detailed-btn {
+        background-color: #0ac775 !important;
+        border-color: #0ac775 !important;
+    }
+
+    .chart-nav-btn.back-btn {
+        background-color: #4b5563 !important;
+        border-color: #4b5563 !important;
+        color: #f3f4f6 !important;
+    }
+
+    .chart-nav-btn.back-btn:hover {
+        background-color: #374151 !important;
+        border-color: #374151 !important;
+    }
+
+    /* Chart container - ensure immediate dark mode styling with maximum specificity */
+    .chart-container,
+    #graph,
+    #detailed-graph,
+    div.chart-container,
+    div#graph,
+    div#detailed-graph {
+        background-color: #1f2937 !important;
+        border-color: rgba(255, 255, 255, 0.1) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    }
+    
+    /* Ensure empty chart containers also get dark styling */
+    .chart-container:empty,
+    #graph:empty,
+    #detailed-graph:empty,
+    div.chart-container:empty,
+    div#graph:empty,
+    div#detailed-graph:empty {
+        background-color: #1f2937 !important;
+        border-color: rgba(255, 255, 255, 0.1) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    }
+
+    /* Loading and error states */
+    .chart-loading {
+        background-color: #374151 !important;
+        border-color: rgba(255, 255, 255, 0.1) !important;
+        color: #d1d5db !important;
+    }
+
+    .chart-error {
+        background-color: rgba(220, 53, 69, 0.1) !important;
+        border-color: rgba(220, 53, 69, 0.3) !important;
+        color: #fca5a5 !important;
+    }
+
+    .chart-error h6 {
+        color: #fca5a5 !important;
+    }
 }
 
 /* ========================================

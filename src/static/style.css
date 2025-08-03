@@ -1,86 +1,88 @@
 body {
-	margin: 0;
-	padding: 0;
-	background-color: #f4f8f7;
-	font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f4f8f7;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 .container-fluid {
-	width: 100%;
-	padding: 20px 40px;
+    width: 100%;
+    padding: 20px 40px;
 }
 
 h1 {
-	color: #0ac775;
+    color: #0ac775;
 }
 
 .card-panel {
-	background-color: #ffffff;
-	border-radius: 8px;
-	padding: 20px;
-	margin-bottom: 20px;
-	box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    background-color: #ffffff;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
 .fib-settings,
 #trendLineSettings {
-	background-color: #ffffff;
-	padding: 15px;
-	border-radius: 8px;
-	margin-bottom: 20px;
-	box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    background-color: #ffffff;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
 .fib-label {
-	display: inline-block;
-	margin-right: 10px;
-	font-weight: 500;
+    display: inline-block;
+    margin-right: 10px;
+    font-weight: 500;
 }
 
 .stat-label {
-	color: #555;
-	font-weight: 500;
+    color: #555;
+    font-weight: 500;
 }
 
 .stat-value {
-	font-weight: 600;
-	color: #333;
+    font-weight: 600;
+    color: #333;
 }
 
 #graph {
-	width: 100%;
+    width: 100%;
 }
 
 .form-check-input:checked {
-	background-color: #0ac775;
-	border-color: #0ac775;
+    background-color: #0ac775;
+    border-color: #0ac775;
 }
 
 .spinner-border.text-primary {
-	color: #0ac775 !important;
+    color: #0ac775 !important;
 }
 
 .text-primary {
-	color: #0ac775 !important;
+    color: #0ac775 !important;
 }
 
 .btn-primary {
-	background-color: #0ac775;
-	border-color: #0ac775;
+    background-color: #0ac775;
+    border-color: #0ac775;
 }
 
 .btn-primary:hover {
-	background-color: #0cbf72;
-	border-color: #0cbf72;
+    background-color: #0cbf72;
+    border-color: #0cbf72;
 }
 
 .gradient-cell {
     font-weight: 600;
-    color: #000; /* stays readable on light backgrounds */
+    color: #000;
+    /* stays readable on light backgrounds */
 }
 
 .table-responsive {
-    max-height: 90vh;         /* Only scroll if the table gets tall */
+    max-height: 90vh;
+    /* Only scroll if the table gets tall */
     overflow-y: auto;
     overflow-x: auto;
 }
@@ -354,7 +356,8 @@ h1 {
 /* Make financial metrics and MOAT analysis sections same height */
 .stats-row {
     display: flex;
-    align-items: stretch; /* This makes both columns the same height */
+    align-items: stretch;
+    /* This makes both columns the same height */
 }
 
 .stats-row .col-lg-3,
@@ -364,14 +367,16 @@ h1 {
 }
 
 .stats-row .card-panel {
-    flex: 1; /* This makes both panels expand to fill available height */
+    flex: 1;
+    /* This makes both panels expand to fill available height */
     display: flex;
     flex-direction: column;
 }
 
 /* Uniform height for all MOAT analysis tabs */
 .tab-content {
-    height: 400px; /* Set fixed height for all tabs */
+    height: 400px;
+    /* Set fixed height for all tabs */
     overflow-y: auto;
     padding-right: 10px;
 }
@@ -414,18 +419,19 @@ h1 {
 /* Responsive adjustments */
 @media (max-width: 991px) {
     .tab-content {
-        height: 300px; /* Smaller height on mobile */
+        height: 300px;
+        /* Smaller height on mobile */
     }
 }
 
 @media (max-width: 768px) {
     .tab-content {
-        height: 250px; /* Even smaller on mobile */
+        height: 250px;
+        /* Even smaller on mobile */
     }
 }
 
-<style>
-.analysis-timestamp {
+<style>.analysis-timestamp {
     font-size: 0.75rem;
     color: #6c757d;
 }
@@ -490,7 +496,7 @@ h1 {
 }
 
 /* Optional: Style for the moving averages section */
-.ma-checkbox:checked + .form-check-label {
+.ma-checkbox:checked+.form-check-label {
     font-weight: bold;
 }
 
@@ -506,4 +512,558 @@ h1 {
 
 .text-purple {
     color: #6f42c1;
+}
+
+/* ========================================
+   COMPREHENSIVE DARK MODE STYLES
+   ======================================== */
+
+@media (prefers-color-scheme: dark) {
+
+    /* Base body and container styling */
+    body {
+        background-color: #0f172a !important;
+        /* Darker than chart for contrast */
+        color: #f1f5f9 !important;
+    }
+
+    .container-fluid {
+        background-color: #0f172a !important;
+        color: #f1f5f9 !important;
+    }
+
+    /* Main heading */
+    h1 {
+        color: #0ac775 !important;
+        /* Keep brand green */
+    }
+
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+        color: #f1f5f9 !important;
+    }
+
+    /* Card panels - slight contrast from background */
+    .card-panel {
+        background-color: #1e293b !important;
+        /* Lighter than body for contrast */
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+        color: #f1f5f9 !important;
+    }
+
+    /* Settings panels */
+    .fib-settings,
+    #trendLineSettings {
+        background-color: #1e293b !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+        color: #f1f5f9 !important;
+    }
+
+    /* Text styling */
+    .stat-label {
+        color: #cbd5e1 !important;
+        /* Lighter gray for labels */
+    }
+
+    .stat-value {
+        color: #f1f5f9 !important;
+        /* White for values */
+    }
+
+    /* Form elements */
+    .form-check-input:checked {
+        background-color: #0ac775 !important;
+        border-color: #0ac775 !important;
+    }
+
+    .form-control {
+        background-color: #334155 !important;
+        border-color: rgba(255, 255, 255, 0.2) !important;
+        color: #f1f5f9 !important;
+    }
+
+    .form-control:focus {
+        background-color: #475569 !important;
+        border-color: #0ac775 !important;
+        box-shadow: 0 0 0 0.2rem rgba(10, 199, 117, 0.25) !important;
+        color: #f1f5f9 !important;
+    }
+
+    .form-control::placeholder {
+        color: #94a3b8 !important;
+    }
+
+    /* Buttons */
+    .btn-primary {
+        background-color: #0ac775 !important;
+        border-color: #0ac775 !important;
+    }
+
+    .btn-primary:hover {
+        background-color: #0cbf72 !important;
+        border-color: #0cbf72 !important;
+    }
+
+    .btn-secondary {
+        background-color: #475569 !important;
+        border-color: #475569 !important;
+        color: #f1f5f9 !important;
+    }
+
+    .btn-secondary:hover {
+        background-color: #334155 !important;
+        border-color: #334155 !important;
+        color: #f1f5f9 !important;
+    }
+
+    .btn-outline-secondary {
+        background-color: #334155 !important;
+        border-color: rgba(255, 255, 255, 0.2) !important;
+        color: #f1f5f9 !important;
+    }
+
+    .btn-outline-secondary:hover {
+        background-color: #475569 !important;
+        border-color: rgba(255, 255, 255, 0.3) !important;
+        color: #f1f5f9 !important;
+    }
+
+    /* Button groups */
+    .btn-group .btn-check:checked+.btn-outline-secondary {
+        background-color: #0ac775 !important;
+        border-color: #0ac775 !important;
+        color: white !important;
+    }
+
+    /* Tables */
+    .table {
+        color: #f1f5f9 !important;
+        background-color: transparent !important;
+    }
+
+    .table th {
+        background-color: #1e293b !important;
+        border-color: rgba(255, 255, 255, 0.1) !important;
+        color: #f1f5f9 !important;
+    }
+
+    .table td {
+        border-color: rgba(255, 255, 255, 0.1) !important;
+        color: #f1f5f9 !important;
+    }
+
+    .table-responsive {
+        background-color: #1e293b !important;
+    }
+
+    #watchlist-table thead th {
+        background-color: #1e293b !important;
+        border-bottom-color: rgba(255, 255, 255, 0.2) !important;
+    }
+
+    /* Gradient cells - maintain readability */
+    .gradient-cell {
+        color: #000 !important;
+        /* Keep dark text on gradient backgrounds */
+    }
+
+    /* Analysis content */
+    .analysis-content {
+        color: #f1f5f9 !important;
+    }
+
+    .analysis-content h2,
+    .analysis-content h3 {
+        color: #0ac775 !important;
+        /* Keep brand green for headings */
+    }
+
+    .analysis-content h4 {
+        color: #f1f5f9 !important;
+    }
+
+    .analysis-content p {
+        color: #e2e8f0 !important;
+        /* Slightly muted for body text */
+    }
+
+    .analysis-content li {
+        color: #e2e8f0 !important;
+    }
+
+    .analysis-content strong {
+        color: #0ac775 !important;
+        /* Brand green for emphasis */
+    }
+
+    .analysis-content em {
+        color: #cbd5e1 !important;
+        /* Light gray for italics */
+    }
+
+    /* Success and error states */
+    .analysis-success {
+        border-left-color: #0ac775 !important;
+        background-color: rgba(10, 199, 117, 0.1) !important;
+        color: #f1f5f9 !important;
+    }
+
+    .analysis-error {
+        border-left-color: #ef4444 !important;
+        background-color: rgba(239, 68, 68, 0.1) !important;
+        color: #fca5a5 !important;
+    }
+
+    .moat-success {
+        border-left-color: #0ac775 !important;
+        background-color: rgba(10, 199, 117, 0.1) !important;
+        color: #f1f5f9 !important;
+    }
+
+    /* Navigation tabs */
+    .nav-tabs {
+        border-bottom-color: rgba(255, 255, 255, 0.1) !important;
+    }
+
+    .nav-tabs .nav-link {
+        color: #cbd5e1 !important;
+        border-bottom-color: transparent !important;
+        background-color: transparent !important;
+    }
+
+    .nav-tabs .nav-link.active {
+        color: #0ac775 !important;
+        border-bottom-color: #0ac775 !important;
+        background-color: transparent !important;
+    }
+
+    .nav-tabs .nav-link:hover {
+        color: #0ac775 !important;
+        border-bottom-color: rgba(10, 199, 117, 0.3) !important;
+    }
+
+    /* Tab content */
+    .tab-content {
+        background-color: transparent !important;
+    }
+
+    /* Loading states */
+    #analysis-loading .card-panel,
+    #moat-loading,
+    #moat-initial {
+        background-color: #1e293b !important;
+        color: #f1f5f9 !important;
+    }
+
+    #moat-loading p {
+        color: #0ac775 !important;
+    }
+
+    #moat-loading small,
+    #moat-initial p,
+    #moat-initial small {
+        color: #cbd5e1 !important;
+    }
+
+    /* Error states */
+    #moat-error h6 {
+        color: #ef4444 !important;
+    }
+
+    .alert-danger {
+        background-color: rgba(239, 68, 68, 0.1) !important;
+        border-color: rgba(239, 68, 68, 0.3) !important;
+        color: #fca5a5 !important;
+    }
+
+    /* Spinner */
+    .spinner-border.text-primary {
+        color: #0ac775 !important;
+    }
+
+    .text-primary {
+        color: #0ac775 !important;
+    }
+
+    /* Custom scrollbar for dark mode */
+    .tab-content::-webkit-scrollbar-track {
+        background: #334155 !important;
+    }
+
+    .tab-content::-webkit-scrollbar-thumb {
+        background: #0ac775 !important;
+    }
+
+    .tab-content::-webkit-scrollbar-thumb:hover {
+        background: #0cbf72 !important;
+    }
+
+    /* Timestamp styling */
+    .analysis-timestamp {
+        color: #94a3b8 !important;
+    }
+
+    .timestamp-fresh {
+        color: #22c55e !important;
+    }
+
+    .timestamp-old {
+        color: #eab308 !important;
+    }
+
+    .timestamp-stale {
+        color: #ef4444 !important;
+    }
+
+    /* Custom MA styling */
+    .ma-color-indicator {
+        border-color: rgba(255, 255, 255, 0.3) !important;
+    }
+
+    .custom-ma-tag {
+        background-color: #334155 !important;
+        border-color: rgba(255, 255, 255, 0.2) !important;
+        color: #f1f5f9 !important;
+    }
+
+    .custom-ma-tag .remove-custom-ma {
+        color: #ef4444 !important;
+    }
+
+    .custom-ma-tag .remove-custom-ma:hover {
+        color: #dc2626 !important;
+    }
+
+    #custom-ma-list {
+        background-color: #334155 !important;
+        border-color: rgba(255, 255, 255, 0.2) !important;
+        color: #f1f5f9 !important;
+    }
+
+    /* Settings section */
+    .settings-section {
+        background-color: #334155 !important;
+        color: #f1f5f9 !important;
+    }
+
+    /* Text colors */
+    .text-muted {
+        color: #94a3b8 !important;
+    }
+
+    .text-purple {
+        color: #a855f7 !important;
+    }
+
+    /* Input groups */
+    .input-group-text {
+        background-color: #334155 !important;
+        border-color: rgba(255, 255, 255, 0.2) !important;
+        color: #f1f5f9 !important;
+    }
+
+    /* Dropdown menus */
+    .dropdown-menu {
+        background-color: #1e293b !important;
+        border-color: rgba(255, 255, 255, 0.1) !important;
+    }
+
+    .dropdown-item {
+        color: #f1f5f9 !important;
+    }
+
+    .dropdown-item:hover {
+        background-color: #334155 !important;
+        color: #f1f5f9 !important;
+    }
+
+    /* Badges */
+    .badge {
+        background-color: #334155 !important;
+        color: #f1f5f9 !important;
+    }
+
+    .badge.bg-primary {
+        background-color: #0ac775 !important;
+    }
+
+    .badge.bg-secondary {
+        background-color: #475569 !important;
+    }
+
+    /* Links */
+    a {
+        color: #0ac775 !important;
+    }
+
+    a:hover {
+        color: #0cbf72 !important;
+    }
+
+    /* Progress bars */
+    .progress {
+        background-color: #334155 !important;
+    }
+
+    .progress-bar {
+        background-color: #0ac775 !important;
+    }
+
+    /* Tooltips */
+    .tooltip .tooltip-inner {
+        background-color: #1e293b !important;
+        color: #f1f5f9 !important;
+    }
+
+    /* Modals */
+    .modal-content {
+        background-color: #1e293b !important;
+        border-color: rgba(255, 255, 255, 0.1) !important;
+        color: #f1f5f9 !important;
+    }
+
+    .modal-header {
+        border-bottom-color: rgba(255, 255, 255, 0.1) !important;
+    }
+
+    .modal-footer {
+        border-top-color: rgba(255, 255, 255, 0.1) !important;
+    }
+
+    /* Close button */
+    .btn-close {
+        filter: invert(1) grayscale(100%) brightness(200%);
+    }
+
+    /* Pagination */
+    .page-link {
+        background-color: #334155 !important;
+        border-color: rgba(255, 255, 255, 0.2) !important;
+        color: #f1f5f9 !important;
+    }
+
+    .page-link:hover {
+        background-color: #475569 !important;
+        border-color: rgba(255, 255, 255, 0.3) !important;
+        color: #f1f5f9 !important;
+    }
+
+    .page-item.active .page-link {
+        background-color: #0ac775 !important;
+        border-color: #0ac775 !important;
+    }
+
+    /* Breadcrumbs */
+    .breadcrumb {
+        background-color: #334155 !important;
+    }
+
+    .breadcrumb-item a {
+        color: #0ac775 !important;
+    }
+
+    .breadcrumb-item.active {
+        color: #cbd5e1 !important;
+    }
+
+    /* List groups */
+    .list-group-item {
+        background-color: #1e293b !important;
+        border-color: rgba(255, 255, 255, 0.1) !important;
+        color: #f1f5f9 !important;
+    }
+
+    .list-group-item:hover {
+        background-color: #334155 !important;
+    }
+
+    .list-group-item.active {
+        background-color: #0ac775 !important;
+        border-color: #0ac775 !important;
+    }
+
+    /* Price target projections section */
+    .price-target-card {
+        background-color: #1e293b !important;
+        color: #f1f5f9 !important;
+    }
+
+    /* User projection highlight box - override inline styles */
+    #price-target-container .mt-3.p-2[style*="background-color: #f0fff9"] {
+        background-color: rgba(10, 199, 117, 0.1) !important;
+        border-left-color: #0ac775 !important;
+        color: #f1f5f9 !important;
+    }
+
+    /* Form ranges/sliders */
+    .form-range {
+        background-color: transparent !important;
+    }
+
+    .form-range::-webkit-slider-track {
+        background-color: #475569 !important;
+        border-color: rgba(255, 255, 255, 0.2) !important;
+    }
+
+    .form-range::-webkit-slider-thumb {
+        background-color: #0ac775 !important;
+        border-color: #0ac775 !important;
+    }
+
+    .form-range::-moz-range-track {
+        background-color: #475569 !important;
+        border-color: rgba(255, 255, 255, 0.2) !important;
+    }
+
+    .form-range::-moz-range-thumb {
+        background-color: #0ac775 !important;
+        border-color: #0ac775 !important;
+    }
+
+    /* Form labels */
+    .form-label {
+        color: #f1f5f9 !important;
+    }
+
+    /* Chart container dark mode styling */
+    #graph,
+    .chart-container,
+    .container-fluid #graph,
+    .container-fluid .chart-container {
+        background-color: #111827 !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        color: #f1f5f9 !important;
+    }
+
+    /* AGGRESSIVE OVERRIDE: Target Plotly-generated elements with proper hierarchy */
+    #graph .plotly-graph-div,
+    #graph .js-plotly-plot,
+    #graph .plot-container,
+    .chart-container .plotly-graph-div,
+    .chart-container .js-plotly-plot,
+    .chart-container .plot-container {
+        background-color: #111827 !important;  /* Container/paper background */
+        background: #111827 !important;
+    }
+
+    /* Chart plot area should be slightly lighter */
+    #graph .svg-container,
+    .chart-container .svg-container {
+        background-color: #1f2937 !important;  /* Plot area background */
+        background: #1f2937 !important;
+    }
+
+    /* Target any white backgrounds in the chart */
+    #graph *[style*="background-color: white"],
+    #graph *[style*="background: white"],
+    .chart-container *[style*="background-color: white"],
+    .chart-container *[style*="background: white"] {
+        background-color: #111827 !important;
+        background: #111827 !important;
+    }
 }

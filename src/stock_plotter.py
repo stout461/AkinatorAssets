@@ -74,13 +74,18 @@ class StockPlotter:
             # Determine the appropriate interval based on the period
             interval = self.get_optimal_interval(period)
             
-            # For intervals other than daily, we need to use period instead of start/end dates
-            if interval != '1d':
+            # For hourly intervals, we need to use period instead of start/end dates
+            if interval == '1h' or interval == '4h':
                 # Map our period to yfinance period format
+                yf_period = self.map_period_to_yfinance(period)
+                # Try to get extended hours data (pre-market + after-hours)
+                df = ticker.history(period=yf_period, interval=interval, prepost=True)
+            elif interval == '1wk':
+                # For weekly data, use period format
                 yf_period = self.map_period_to_yfinance(period)
                 df = ticker.history(period=yf_period, interval=interval)
             else:
-                # Use start/end dates for daily data
+                # Use start/end dates for daily data (covers 3M, 6M, 1Y with daily intervals)
                 df = ticker.history(start=start_date, end=end_date, interval=interval)
             
             if not df.empty and all(col in df.columns for col in ['Open', 'High', 'Low', 'Close', 'Volume']):
@@ -96,7 +101,7 @@ class StockPlotter:
         if period == '1M':
             return '1h'    # 1-hour candlesticks for 1 month
         elif period == '3M':
-            return '4h'    # 4-hour candlesticks for 3 months
+            return '4h'    # Daily candlesticks for 3 months (better granularity)
         elif period == '6M':
             return '1d'    # Daily candlesticks for 6 months
         elif period == '1Y':
@@ -802,6 +807,7 @@ class StockPlotter:
             show_candlestick: Whether to use candlestick or line for price (default: True)
             elliott_fib_levels: Elliott wave enhancement settings (default: None)
 
+
         Returns:
             dict: Contains figure, price stats, financial metrics, and price target
         """
@@ -857,7 +863,18 @@ class StockPlotter:
         if not isinstance(df.index, pd.DatetimeIndex):
             df.index = pd.to_datetime(df.index)
 
-        x_dates = df.index.strftime('%Y-%m-%d').tolist()
+        # Format dates based on the interval for proper x-axis display
+        interval = self.get_optimal_interval(period)
+        if interval == '1h' or interval == '4h':
+            # For hourly data, show date and time
+            x_dates = df.index.strftime('%Y-%m-%d %H:%M').tolist()
+        elif interval == '1wk':
+            # For weekly data, show just the date
+            x_dates = df.index.strftime('%Y-%m-%d').tolist()
+        else:
+            # For daily data, show just the date
+            x_dates = df.index.strftime('%Y-%m-%d').tolist()
+        
         y_values = df['Close'].tolist()
 
         # Add price trace (candlestick or line)
@@ -1005,6 +1022,8 @@ class StockPlotter:
         base_height = 600
         subplot_height = 200
         total_height = base_height + (subplot_count - 1) * subplot_height
+
+
 
         fig.update_layout(
             title=dict(

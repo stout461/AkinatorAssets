@@ -658,22 +658,30 @@ $(document).ready(function() {
                 if (col === "5Y Multibagger Rate") {
                     const rate = parseFloat(cellValue);
                     let backgroundColor = "#ffffff";
+                    let textColor = "#000000";
 
                     if (!isNaN(rate)) {
                         const midpoint = 1.5;
-                        let intensity;
 
                         if (rate < midpoint) {
-                            intensity = Math.round(255 * (rate / midpoint));
-                            backgroundColor = `rgb(255, ${intensity}, ${intensity})`;
+                            // Red gradient for values below 1.5
+                            const intensity = Math.max(0.3, rate / midpoint); // Minimum 30% intensity for readability
+                            const redValue = Math.round(255);
+                            const greenBlueValue = Math.round(255 * intensity);
+                            backgroundColor = `rgb(${redValue}, ${greenBlueValue}, ${greenBlueValue})`;
+                            textColor = intensity < 0.6 ? "#ffffff" : "#000000"; // White text on darker backgrounds
                         } else {
+                            // Green gradient for values above 1.5
                             const greenRange = Math.min(rate - midpoint, 3.5);
-                            intensity = Math.round(255 * (1 - greenRange / 2));
-                            backgroundColor = `rgb(${intensity}, 255, ${intensity})`;
+                            const intensity = Math.max(0.3, 1 - greenRange / 3.5); // Minimum 30% intensity
+                            const greenValue = Math.round(255);
+                            const redBlueValue = Math.round(255 * intensity);
+                            backgroundColor = `rgb(${redBlueValue}, ${greenValue}, ${redBlueValue})`;
+                            textColor = intensity < 0.6 ? "#ffffff" : "#000000"; // White text on darker backgrounds
                         }
                     }
 
-                    return `<td class="gradient-cell" style="background-color: ${backgroundColor}">${cellValue}</td>`;
+                    return `<td class="gradient-cell" style="background-color: ${backgroundColor}; color: ${textColor}; font-weight: 600;">${cellValue}</td>`;
                 }
 
                 return `<td>${cellValue}</td>`;

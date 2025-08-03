@@ -383,13 +383,17 @@ class StockChart {
     // ========================================
 
     async loadChartData(onlyChart = false) {
+        console.log('🔍 loadChartData called, onlyChart:', onlyChart);
         const params = this.getCommonFetchParams();
+        console.log('🔍 Chart params:', params);
 
         if (!params.ticker) {
+            console.log('🔍 No ticker provided');
             this.ui.showError('Please enter a valid ticker symbol');
             return Promise.reject('Invalid ticker');
         }
 
+        console.log('🔍 Starting chart data load for ticker:', params.ticker);
         this.ui.showLoading();
         this.ui.hideError();
 
@@ -423,10 +427,21 @@ class StockChart {
     }
 
     async renderChart(graphData) {
+        console.log('🔍 renderChart called with data:', graphData ? 'DATA_PRESENT' : 'NO_DATA');
         const figData = JSON.parse(graphData);
+        console.log('🔍 figData parsed:', figData);
 
         // Detect dark mode
         const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        console.log('🔍 Dark mode detected:', isDarkMode);
+        console.log('🔍 Container ID:', this.containerId);
+        
+
+        
+        // Apply dark mode styles to legend and hover tooltips
+        if (isDarkMode) {
+            this.applyDarkModeStyles(figData);
+        }
 
         // Apply design improvements for clarity, hierarchy, color, contrast, typography
         // Typography: Sans-serif font, consistent sizes
@@ -503,7 +518,22 @@ class StockChart {
             modeBarButtonsToRemove: ['toImage', 'sendDataToCloud']
         };
 
+        // Force dark backgrounds in layout before rendering (essential for working dark mode)
+        if (isDarkMode) {
+            figData.layout.plot_bgcolor = '#1f2937';  // Chart area
+            figData.layout.paper_bgcolor = '#111827'; // Outer area
+        }
+
         await Plotly.newPlot(this.containerId, figData.data, figData.layout, config);
+        
+        // Force container styling after Plotly renders (essential for working dark mode)
+        if (isDarkMode) {
+            const container = document.getElementById(this.containerId);
+            if (container) {
+                container.style.setProperty('background-color', '#111827', 'important');
+                container.style.setProperty('background', '#111827', 'important');
+            }
+        }
 
         // Setup click handler
         const graphDiv = document.getElementById(this.containerId);
@@ -521,6 +551,110 @@ class StockChart {
         this.ui.updateIndicatorVisualState();
 
         console.log(`✅ Chart rendered in ${this.mode} mode`);
+        
+        // Apply dark mode styles after chart is rendered
+        if (isDarkMode) {
+            this.applyDarkModeToPlotlyElements();
+        }
+    }
+
+    applyDarkModeStyles(figData) {
+        // Configure dark mode legend
+        figData.layout.legend = {
+            ...figData.layout.legend,
+            bgcolor: 'rgba(30, 30, 30, 0.95)',
+            bordercolor: 'rgba(255, 255, 255, 0.2)',
+            borderwidth: 1,
+            font: {
+                color: 'white',
+                size: 12,
+                family: 'Arial, sans-serif'
+            }
+        };
+
+        // Configure dark mode hover tooltips
+        figData.layout.hoverlabel = {
+            bgcolor: 'rgba(20, 20, 20, 0.95)',
+            bordercolor: 'rgba(255, 255, 255, 0.3)',
+            font: {
+                color: 'white',
+                size: 13,
+                family: 'Arial, sans-serif'
+            },
+            align: 'left'
+        };
+    }
+
+    applyDarkModeToPlotlyElements() {
+        // Apply styles to Plotly elements after rendering
+        setTimeout(() => {
+            const chartContainer = document.getElementById(this.containerId);
+            if (!chartContainer) return;
+
+            // FORCE container background to stay dark (override Plotly's styling)
+            console.log('🔍 Applying dark mode to container:', this.containerId);
+            console.log('🔍 Container element:', chartContainer);
+            console.log('🔍 Current background:', chartContainer.style.backgroundColor);
+            
+            chartContainer.style.backgroundColor = '#1f2937';
+            chartContainer.style.border = '1px solid rgba(255, 255, 255, 0.1)';
+            chartContainer.style.color = '#f1f5f9';
+            
+            console.log('🔍 After setting background:', chartContainer.style.backgroundColor);
+
+            // Style legend elements
+            const legendElements = chartContainer.querySelectorAll('.legend');
+            legendElements.forEach(legend => {
+                legend.style.backgroundColor = 'rgba(30, 30, 30, 0.95)';
+                legend.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+                legend.style.color = 'white';
+            });
+
+            // Style legend text
+            const legendTexts = chartContainer.querySelectorAll('.legend text, .legendtext');
+            legendTexts.forEach(text => {
+                text.style.fill = 'white';
+            });
+
+            // Style hover elements (applied dynamically when hovering)
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    mutation.addedNodes.forEach((node) => {
+                        if (node.nodeType === 1 && node.classList && node.classList.contains('hovertext')) {
+                            node.style.backgroundColor = 'rgba(20, 20, 20, 0.95)';
+                            node.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+                            node.style.color = 'white';
+                            
+                            // Style text elements within hover
+                            const hoverTexts = node.querySelectorAll('text, .nums, .name');
+                            hoverTexts.forEach(text => {
+                                text.style.fill = 'white';
+                                text.style.color = 'white';
+                            });
+                        }
+                    });
+                });
+            });
+
+            observer.observe(chartContainer, {
+                childList: true,
+                subtree: true
+            });
+
+            // Re-apply container styling multiple times to ensure it sticks
+            const reapplyContainerStyling = () => {
+                chartContainer.style.backgroundColor = '#1f2937';
+                chartContainer.style.border = '1px solid rgba(255, 255, 255, 0.1)';
+                chartContainer.style.color = '#f1f5f9';
+            };
+
+            // Apply immediately and then again after short delays
+            reapplyContainerStyling();
+            setTimeout(reapplyContainerStyling, 200);
+            setTimeout(reapplyContainerStyling, 500);
+            setTimeout(reapplyContainerStyling, 1000);
+
+        }, 100);
     }
 
     // ========================================

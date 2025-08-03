@@ -532,11 +532,8 @@ class StockPlotter:
         wave1_delta = y_wave[1] - y_wave[0]
         is_up = wave1_delta > 0
 
-        # Extend projections well into the future to handle chart panning
-        from datetime import datetime, timedelta
-        last_date_obj = datetime.strptime(x_dates[-1], '%Y-%m-%d')
-        extended_date = last_date_obj + timedelta(days=365)  # Extend 1 year into future
-        extended_date_str = extended_date.strftime('%Y-%m-%d')
+        # Use the extended x_dates that were passed in (already extended for projections)
+        extended_date_str = x_dates[-1]  # Use the last date from the extended x_dates
 
         if num_points == 2:
             # Project Wave 2 retracements of Wave 1 (corrective)
@@ -547,14 +544,20 @@ class StockPlotter:
                     target = y_wave[1] - retr * wave1_len
                 else:
                     target = y_wave[1] + retr * wave1_len
+                
+                # Create dense projection line for better click detection
+                projection_x_dates = self.create_projection_dates(x_wave[-1], x_dates)
+                projection_y_values = [target] * len(projection_x_dates)
+                
                 fig.add_trace(go.Scatter(
-                    x=[x_wave[-1], extended_date_str],
-                    y=[target, target],
+                    x=projection_x_dates,
+                    y=projection_y_values,
                     mode='lines',
                     line=dict(dash='dash', color=proj_color, width=1),
                     name=f'W2 {retr*100:.1f}% Retr.',
                     hoverinfo='name+y'
                 ), row=row, col=1)
+                print(f"🔍 Added W2 projection line from {x_wave[-1]} to {projection_x_dates[-1]} at price {target:.2f} with {len(projection_x_dates)} points")
                 fig.add_annotation(
                     x=extended_date_str,
                     y=target,
@@ -574,14 +577,20 @@ class StockPlotter:
                     target = wave2_end + ext * wave1_len
                 else:
                     target = wave2_end - ext * wave1_len
+                
+                # Create dense projection line for better click detection
+                projection_x_dates = self.create_projection_dates(x_wave[-1], x_dates)
+                projection_y_values = [target] * len(projection_x_dates)
+                
                 fig.add_trace(go.Scatter(
-                    x=[x_wave[-1], extended_date_str],
-                    y=[target, target],
+                    x=projection_x_dates,
+                    y=projection_y_values,
                     mode='lines',
                     line=dict(dash='dash', color=proj_color, width=1),
                     name=f'W3 {ext*100:.1f}% Ext.',
                     hoverinfo='name+y'
                 ), row=row, col=1)
+                print(f"🔍 Added W3 projection line from {x_wave[-1]} to {projection_x_dates[-1]} at price {target:.2f} with {len(projection_x_dates)} points")
                 fig.add_annotation(
                     x=extended_date_str,
                     y=target,
@@ -603,14 +612,20 @@ class StockPlotter:
                     target = wave3_end - retr * wave3_len
                 else:
                     target = wave3_end + retr * wave3_len
+                
+                # Create dense projection line for better click detection
+                projection_x_dates = self.create_projection_dates(x_wave[-1], x_dates)
+                projection_y_values = [target] * len(projection_x_dates)
+                
                 fig.add_trace(go.Scatter(
-                    x=[x_wave[-1], extended_date_str],
-                    y=[target, target],
+                    x=projection_x_dates,
+                    y=projection_y_values,
                     mode='lines',
                     line=dict(dash='dash', color=proj_color, width=1),
                     name=f'W4 {retr*100:.1f}% Retr.',
                     hoverinfo='name+y'
                 ), row=row, col=1)
+                print(f"🔍 Added W4 projection line from {x_wave[-1]} to {projection_x_dates[-1]} at price {target:.2f} with {len(projection_x_dates)} points")
                 fig.add_annotation(
                     x=extended_date_str,
                     y=target,
@@ -630,14 +645,20 @@ class StockPlotter:
 
             # Method 1: Equal to Wave 1
             target_eq = wave4_end + wave1_len if is_up else wave4_end - wave1_len
+            
+            # Create dense projection line for better click detection
+            projection_x_dates = self.create_projection_dates(x_wave[-1], x_dates)
+            projection_y_values = [target_eq] * len(projection_x_dates)
+            
             fig.add_trace(go.Scatter(
-                x=[x_wave[-1], extended_date_str],
-                y=[target_eq, target_eq],
+                x=projection_x_dates,
+                y=projection_y_values,
                 mode='lines',
                 line=dict(dash='dash', color=proj_color, width=1),
                 name='W5 = W1',
                 hoverinfo='name+y'
             ), row=row, col=1)
+            print(f"🔍 Added W5 = W1 projection line from {x_wave[-1]} to {projection_x_dates[-1]} at price {target_eq:.2f} with {len(projection_x_dates)} points")
             fig.add_annotation(
                 x=extended_date_str,
                 y=target_eq,
@@ -649,14 +670,20 @@ class StockPlotter:
 
             # Method 2: 61.8% of Waves 1+3 (from 0 to 3)
             target_618 = wave4_end + 0.618 * wave13_len if is_up else wave4_end - 0.618 * wave13_len
+            
+            # Create dense projection line for better click detection
+            projection_x_dates = self.create_projection_dates(x_wave[-1], x_dates)
+            projection_y_values = [target_618] * len(projection_x_dates)
+            
             fig.add_trace(go.Scatter(
-                x=[x_wave[-1], extended_date_str],
-                y=[target_618, target_618],
+                x=projection_x_dates,
+                y=projection_y_values,
                 mode='lines',
                 line=dict(dash='dash', color=proj_color, width=1),
                 name='W5 61.8% W1+3',
                 hoverinfo='name+y'
             ), row=row, col=1)
+            print(f"🔍 Added W5 61.8% W1+3 projection line from {x_wave[-1]} to {projection_x_dates[-1]} at price {target_618:.2f} with {len(projection_x_dates)} points")
             fig.add_annotation(
                 x=extended_date_str,
                 y=target_618,
@@ -669,14 +696,20 @@ class StockPlotter:
             # Method 3: Inverse 1.236-1.618% extension of Wave 4
             for ext in self.wave5_extensions:
                 target = wave4_end + ext * wave4_len if is_up else wave4_end - ext * wave4_len
+                
+                # Create dense projection line for better click detection
+                projection_x_dates = self.create_projection_dates(x_wave[-1], x_dates)
+                projection_y_values = [target] * len(projection_x_dates)
+                
                 fig.add_trace(go.Scatter(
-                    x=[x_wave[-1], extended_date_str],
-                    y=[target, target],
+                    x=projection_x_dates,
+                    y=projection_y_values,
                     mode='lines',
                     line=dict(dash='dash', color=proj_color, width=1),
                     name=f'W5 {ext*100:.1f}% W4',
                     hoverinfo='name+y'
                 ), row=row, col=1)
+                print(f"🔍 Added W5 {ext*100:.1f}% W4 projection line from {x_wave[-1]} to {projection_x_dates[-1]} at price {target:.2f} with {len(projection_x_dates)} points")
                 fig.add_annotation(
                     x=extended_date_str,
                     y=target,
@@ -745,12 +778,15 @@ class StockPlotter:
         """Add Fibonacci retracement and extension lines to the plot."""
         price_range = fib_high_val - fib_low_val
 
+        # Extend x_dates for Elliott Wave projections (add 6 months into the future)
+        extended_x_dates = self.extend_dates_for_projections(x_dates)
+
         # Standard retracement levels
         for level_key, config in self.fib_levels_config.items():
             value = fib_high_val - config['ratio'] * price_range
             fig.add_trace(go.Scatter(
-                x=x_dates,
-                y=[value] * len(x_dates),
+                x=extended_x_dates,
+                y=[value] * len(extended_x_dates),
                 mode='lines',
                 line=dict(
                     color=config['color'],
@@ -768,8 +804,8 @@ class StockPlotter:
                 ratio_percent = ratio * 100
 
                 fig.add_trace(go.Scatter(
-                    x=x_dates,
-                    y=[extension_value] * len(x_dates),
+                    x=extended_x_dates,
+                    y=[extension_value] * len(extended_x_dates),
                     mode='lines',
                     line=dict(
                         color=self.extension_config['colors'][i],
@@ -779,6 +815,62 @@ class StockPlotter:
                     name=f"{ratio_percent:.1f}% - ${extension_value:.2f}",
                     hoverinfo='name+y'
                 ), row=row, col=col)
+
+    def extend_dates_for_projections(self, x_dates):
+        """Extend the date range for Elliott Wave projections."""
+        from datetime import datetime, timedelta
+        
+        if not x_dates:
+            return x_dates
+        
+        print(f"🔍 Original x_dates length: {len(x_dates)}")
+        print(f"🔍 First date: {x_dates[0]}, Last date: {x_dates[-1]}")
+        
+        # Convert x_dates to datetime if they're strings
+        if isinstance(x_dates[0], str):
+            date_objects = [datetime.strptime(date, '%Y-%m-%d') for date in x_dates]
+        else:
+            date_objects = x_dates
+        
+        # Get the last date and extend by 6 months (approximately 130 trading days)
+        last_date = date_objects[-1]
+        extended_dates = []
+        
+        # Add dates from the last date to 6 months in the future
+        # Use business days to match trading days
+        current_date = last_date
+        days_added = 0
+        while days_added < 130:  # ~6 months of trading days
+            current_date += timedelta(days=1)
+            # Skip weekends (basic approximation)
+            if current_date.weekday() < 5:  # Monday = 0, Friday = 4
+                extended_dates.append(current_date)
+                days_added += 1
+        
+        # Combine original dates with extended dates
+        all_dates = date_objects + extended_dates
+        
+        print(f"🔍 Extended dates length: {len(all_dates)}")
+        print(f"🔍 New last date: {all_dates[-1]}")
+        
+        # Convert back to string format if original was strings
+        if isinstance(x_dates[0], str):
+            return [date.strftime('%Y-%m-%d') for date in all_dates]
+        else:
+            return all_dates
+
+    def create_projection_dates(self, start_date, extended_x_dates):
+        """Create dense date array from start_date to end of extended_x_dates for better click detection."""
+        # Find the index of start_date in extended_x_dates
+        try:
+            start_index = extended_x_dates.index(start_date)
+        except ValueError:
+            # If start_date not found, start from the end of the original data
+            # Assume the extended dates start after the original data
+            start_index = len(extended_x_dates) // 2  # Rough estimate
+        
+        # Return all dates from start_date to the end
+        return extended_x_dates[start_index:]
 
     def create_stock_plot(self, ticker, period, chart_mode='fib', manual_fib=False,
                           show_extensions=False, fib_high=None, moving_averages=None,
@@ -932,7 +1024,9 @@ class StockPlotter:
             show_fib_levels = elliott_fib_levels is not None and elliott_fib_levels.get('show_fib_levels', False)
             extend_projections = elliott_fib_levels is None or elliott_fib_levels.get('extend_projections', True)
 
-            self.add_user_elliott_waves(fig, x_dates, elliott_points, row=1, col=1,
+            # Extend x_dates for Elliott Wave projections
+            extended_x_dates = self.extend_dates_for_projections(x_dates)
+            self.add_user_elliott_waves(fig, extended_x_dates, elliott_points, row=1, col=1,
                                         show_fib_levels=show_fib_levels,
                                         extend_projections=extend_projections)
         elif show_elliott_auto_waves:

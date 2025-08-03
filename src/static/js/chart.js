@@ -32,11 +32,119 @@ class TrendlineModeHandler extends BaseModeHandler {
 // Sub-class: Elliott Mode Handler
 class ElliottModeHandler extends BaseModeHandler {
     handleClick(data) {
-        const clickedX = data.points[0].x;
-        const clickedY = data.points[0].y.toFixed(2);
-        this.chart.state.elliottPoints.push({ x: clickedX, y: clickedY });
+        // Find the best point to snap to (prioritize price chart, then Elliott projections)
+        const bestPoint = this.findBestSnapPoint(data);
+        
+        // For Elliott projection points, preserve the user's selected x-coordinate (date)
+        const clickedX = bestPoint.isElliottProjection ? data.points[0].x : bestPoint.x;
+        const clickedY = bestPoint.y.toFixed(2);
+        
+        // Create Elliott point with additional metadata for projection points
+        const elliottPoint = {
+            x: clickedX,
+            y: clickedY,
+            isElliottProjection: bestPoint.isElliottProjection || false,
+            elliottLevel: bestPoint.elliottLevel || null
+        };
+        
+        this.chart.state.elliottPoints.push(elliottPoint);
         this.chart.ui.updateElliottDisplay(this.chart.state.elliottPoints);
         this.chart.loadChartData(true); // Refresh chart
+    }
+
+    findBestSnapPoint(data) {
+        // Priority order for snapping:
+        // 1. Main price chart (Close Price, Price, Candlestick) - always preferred within data range
+        // 2. Elliott Wave projection lines - if projections enabled (W2, W3, W4, W5 targets)
+        // 3. Any other point as fallback
+        
+        const priceTraceNames = ['Close Price', 'Price', 'Close Price (Fallback)'];
+        
+        // Check if projections toggle is enabled
+        const projectionsEnabled = $('#extend-elliott-projections').is(':checked');
+        
+        // First, try to find a price chart point (always preferred within data range)
+        const isBeyondDataRange = this.isClickBeyondDataRange(data);
+        
+        if (!projectionsEnabled || !isBeyondDataRange) {
+            // Standard behavior: prefer price chart points
+            for (const point of data.points) {
+                if (priceTraceNames.includes(point.fullData.name) || 
+                    point.fullData.type === 'candlestick') {
+                    return point;
+                }
+            }
+        }
+        
+        // Consider Elliott Wave projection lines if:
+        // 1. We're beyond the data range, OR
+        // 2. Projections toggle is enabled (allows Elliott projection snapping anywhere)
+        if (isBeyondDataRange || projectionsEnabled) {
+            console.log('🔍 Checking for Elliott projection lines, projectionsEnabled:', projectionsEnabled, 'isBeyondDataRange:', isBeyondDataRange);
+            for (const point of data.points) {
+                console.log('🔍 Checking point trace name:', point.fullData.name);
+                if (this.isElliottProjectionLine(point.fullData.name)) {
+                    console.log('🔍 Found Elliott projection line:', point.fullData.name);
+                    // Mark this as an Elliott projection point for visual indication
+                    point.isElliottProjection = true;
+                    point.elliottLevel = this.extractElliottLevel(point.fullData.name);
+                    return point;
+                }
+            }
+        }
+        
+        // Fallback: try price chart points if we haven't found them yet
+        for (const point of data.points) {
+            if (priceTraceNames.includes(point.fullData.name) || 
+                point.fullData.type === 'candlestick') {
+                return point;
+            }
+        }
+        
+        // Final fallback to the first point
+        return data.points[0];
+    }
+
+    isElliottProjectionLine(traceName) {
+        // Check if this is an Elliott Wave projection line
+        // Examples: "W2 50.0% Retr.", "W3 161.8% Ext.", "W4 38.2% Retr.", "W5 = W1"
+        if (!traceName) return false;
+        
+        return traceName.includes('W2 ') || 
+               traceName.includes('W3 ') || 
+               traceName.includes('W4 ') || 
+               traceName.includes('W5 ');
+    }
+
+    extractElliottLevel(traceName) {
+        // Extract the Elliott wave level from trace name
+        // Examples: "W2 50.0% Retr." -> "W2", "W3 161.8% Ext." -> "W3"
+        if (!traceName) return 'EW';
+        
+        if (traceName.includes('W2 ')) return 'W2';
+        if (traceName.includes('W3 ')) return 'W3';
+        if (traceName.includes('W4 ')) return 'W4';
+        if (traceName.includes('W5 ')) return 'W5';
+        
+        return 'EW'; // Elliott Wave fallback
+    }
+
+    isClickBeyondDataRange(data) {
+        // Get the clicked x-coordinate (date)
+        const clickedX = data.points[0].x;
+        
+        // Get the chart data range from the stored chart data
+        const chartDataX = this.chart.state.chartDataX;
+        if (!chartDataX || chartDataX.length === 0) {
+            return false; // If no data range available, assume within range
+        }
+        
+        // Get the last date in the actual data
+        const lastDataDate = new Date(chartDataX[chartDataX.length - 1]);
+        const clickedDate = new Date(clickedX);
+        
+        // Return true if clicking beyond the last data point
+        return clickedDate > lastDataDate;
     }
 }
 
@@ -75,10 +183,17 @@ class ChartUI {
         // Update points grid
         grid.empty();
         points.forEach((p, i) => {
+            // Add visual indication for Elliott projection points
+            const isProjectionPoint = p.isElliottProjection || false;
+            const elliottLevel = p.elliottLevel || '';
+            const chipClass = isProjectionPoint ? 'elliott-point-chip elliott-projection-point' : 'elliott-point-chip';
+            const projectionIndicator = isProjectionPoint ? `<span class="elliott-projection-indicator" title="Elliott Wave ${elliottLevel}">${elliottLevel}</span>` : '';
+            
             const pointChip = $(`
-                <div class="elliott-point-chip">
+                <div class="${chipClass}">
                     <span class="point-label">${i}</span>
                     <span class="point-value">${parseFloat(p.y).toFixed(1)}</span>
+                    ${projectionIndicator}
                     <button class="remove-point" data-index="${i}" title="Remove point">×</button>
                 </div>
             `);

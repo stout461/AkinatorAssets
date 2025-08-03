@@ -272,9 +272,10 @@
 
 /* Mode Tabs */
 .mode-tabs {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: repeat(2, auto);
     gap: 6px;
-    flex-wrap: wrap;
 }
 
 .mode-tabs input[type="radio"] {
@@ -526,6 +527,20 @@
     min-height: 24px;
 }
 
+/* Elliott projection point chips - special styling */
+.elliott-point-chip.elliott-projection-point {
+    background-color: #e7f3ff;
+    border-color: #007bff;
+    box-shadow: 0 0 4px rgba(0, 123, 255, 0.3);
+}
+
+.elliott-point-chip.elliott-projection-point:hover {
+    background-color: #e7f3ff;
+    border-color: #007bff;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 123, 255, 0.4);
+}
+
 .elliott-point-chip:hover {
     background-color: #e9ecef;
     border-color: #0ac775;
@@ -567,6 +582,23 @@
 
 .elliott-point-chip .remove-point:hover {
     background-color: #c82333;
+}
+
+/* Elliott projection level indicator */
+.elliott-projection-indicator {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    background-color: #007bff;
+    color: white;
+    font-size: 0.5rem;
+    font-weight: 700;
+    padding: 1px 3px;
+    border-radius: 6px;
+    line-height: 1;
+    min-width: 16px;
+    text-align: center;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 /* ========================================
@@ -1537,6 +1569,23 @@
 
     .elliott-point-chip .point-value {
         color: #f3f4f6 !important;
+    }
+
+    /* Elliott projection point chips in dark mode */
+    .elliott-point-chip.elliott-projection-point {
+        background-color: rgba(0, 123, 255, 0.2) !important;
+        border-color: #007bff !important;
+        color: #007bff !important;
+    }
+
+    .elliott-point-chip.elliott-projection-point:hover {
+        background-color: rgba(0, 123, 255, 0.3) !important;
+        border-color: #007bff !important;
+    }
+
+    .elliott-projection-indicator {
+        background-color: #007bff !important;
+        color: white !important;
     }
 
     /* Points list */

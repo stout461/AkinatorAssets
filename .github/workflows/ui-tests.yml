@@ -10,7 +10,7 @@ on:
       test_environment:
         description: 'Test environment URL'
         required: false
-        default: 'https://staging.akinatorassets.com'
+        default: 'http://staging.akinatorassets.com'
         type: string
       headed_mode:
         description: 'Run tests in headed mode (visible browser)'
@@ -84,10 +84,10 @@ jobs:
             TEST_URL="https://www.akinatorassets.com"
             echo "🏭 Testing production environment"
           elif [[ "${{ github.ref_name }}" == "staging" ]]; then
-            TEST_URL="https://staging.akinatorassets.com"
+            TEST_URL="http://staging.akinatorassets.com"
             echo "🧪 Testing staging environment"
           else
-            TEST_URL="https://staging.akinatorassets.com"
+            TEST_URL="http://staging.akinatorassets.com"
             echo "🔀 Testing against staging (default for feature branches)"
           fi
           

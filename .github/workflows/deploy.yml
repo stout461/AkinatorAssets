@@ -178,7 +178,7 @@ jobs:
     needs: deploy
     if: success()
     with:
-      environment_url: ${{ github.ref_name == 'main' && 'https://www.akinatorassets.com' || 'https://staging.akinatorassets.com' }}
+      environment_url: ${{ github.ref_name == 'main' && 'https://www.akinatorassets.com' || 'http://staging.akinatorassets.com' }}
       environment_name: ${{ github.ref_name == 'main' && 'production' || 'staging' }}
       deployment_commit: ${{ github.sha }}
     secrets:
@@ -198,7 +198,7 @@ jobs:
             echo "TEST_URL=https://www.akinatorassets.com" >> $GITHUB_ENV
             echo "ENV_NAME=production" >> $GITHUB_ENV
           else
-            echo "TEST_URL=https://staging.akinatorassets.com" >> $GITHUB_ENV
+            echo "TEST_URL=http://staging.akinatorassets.com" >> $GITHUB_ENV
             echo "ENV_NAME=staging" >> $GITHUB_ENV
           fi
           

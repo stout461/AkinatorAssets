@@ -37,6 +37,7 @@ env:
   # Test configuration
   NODE_VERSION: '18'
   PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/ms-playwright
+  CI: true
   
 jobs:
   ui-tests:
@@ -154,7 +155,7 @@ jobs:
             echo "🖥️ Running tests in headed mode"
           fi
           
-          # Run the test suite
+          # Run the test suite with CI flag
           npm run test:all
           
       - name: Generate test summary

@@ -170,6 +170,13 @@ function runTestSuite() {
 function generateReport() {
     logStep(4, 'Generating Test Report');
     
+    // Skip interactive report in CI environments
+    if (process.env.CI || process.env.GITHUB_ACTIONS) {
+        log('📊 Skipping interactive report in CI environment', 'yellow');
+        logSuccess('Test report generated (available in test-results/)');
+        return true;
+    }
+    
     if (runCommand('npx playwright show-report', 'Opening test report')) {
         logSuccess('Test report generated and opened');
         return true;

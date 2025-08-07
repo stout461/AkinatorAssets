@@ -24,6 +24,7 @@ on:
 env:
   NODE_VERSION: '18'
   PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/ms-playwright
+  CI: true
 
 jobs:
   smoke-tests:

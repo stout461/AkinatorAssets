@@ -64,8 +64,11 @@ jobs:
       - name: Install dependencies
         run: |
           npm install
-          npx playwright install chrome
-          npx playwright install-deps chrome
+          
+      - name: Install Playwright browsers
+        run: |
+          npx playwright install chromium chrome
+          npx playwright install-deps chromium chrome
           
       - name: Set test environment
         run: |

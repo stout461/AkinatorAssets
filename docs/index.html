@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UI Test Dashboard - Akinator Assets</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #24292e;
+            background-color: #ffffff;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            padding: 40px 0;
+            border-bottom: 1px solid #e1e4e8;
+            margin-bottom: 40px;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            color: #0366d6;
+        }
+        
+        .header p {
+            font-size: 1.1rem;
+            color: #586069;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+        
+        .stat-card {
+            background: #f6f8fa;
+            border: 1px solid #e1e4e8;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            color: #586069;
+            font-size: 0.9rem;
+        }
+        
+        .success { color: #28a745; }
+        .failure { color: #d73a49; }
+        .pending { color: #f66a0a; }
+        
+        .reports-section {
+            margin-top: 40px;
+        }
+        
+        .section-title {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e1e4e8;
+        }
+        
+        .report-list {
+            display: grid;
+            gap: 15px;
+        }
+        
+        .report-item {
+            background: #ffffff;
+            border: 1px solid #e1e4e8;
+            border-radius: 8px;
+            padding: 20px;
+            transition: all 0.2s ease;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .report-item:hover {
+            border-color: #0366d6;
+            box-shadow: 0 2px 8px rgba(3, 102, 214, 0.1);
+        }
+        
+        .report-info {
+            flex: 1;
+        }
+        
+        .report-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        
+        .report-meta {
+            color: #586069;
+            font-size: 0.9rem;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .commit-hash {
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+            background: #f6f8fa;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.85rem;
+        }
+        
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .status-success {
+            background: #dcffe4;
+            color: #28a745;
+        }
+        
+        .status-failure {
+            background: #ffeef0;
+            color: #d73a49;
+        }
+        
+        .status-pending {
+            background: #fff8dc;
+            color: #f66a0a;
+        }
+        
+        .report-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn {
+            padding: 8px 16px;
+            border: 1px solid #e1e4e8;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+        }
+        
+        .btn-primary {
+            background: #0366d6;
+            color: white;
+            border-color: #0366d6;
+        }
+        
+        .btn-primary:hover {
+            background: #0256cc;
+        }
+        
+        .btn-secondary {
+            background: #ffffff;
+            color: #586069;
+        }
+        
+        .btn-secondary:hover {
+            background: #f6f8fa;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #586069;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #586069;
+        }
+        
+        .empty-state h3 {
+            margin-bottom: 10px;
+            color: #24292e;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .report-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+            
+            .report-actions {
+                width: 100%;
+                justify-content: flex-end;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧪 UI Test Dashboard</h1>
+            <p>Automated test results for Akinator Assets application</p>
+        </div>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number success" id="total-passed">-</div>
+                <div class="stat-label">Tests Passed</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number failure" id="total-failed">-</div>
+                <div class="stat-label">Tests Failed</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="total-runs">-</div>
+                <div class="stat-label">Total Runs</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="success-rate">-</div>
+                <div class="stat-label">Success Rate</div>
+            </div>
+        </div>
+        
+        <div class="reports-section">
+            <h2 class="section-title">📊 Recent Test Reports</h2>
+            <div id="reports-container">
+                <div class="loading">
+                    <p>Loading test reports...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Mock data for demonstration - in real implementation, this would come from GitHub API
+        const mockReports = [
+            {
+                id: 'abc123def456',
+                commit: 'abc123d',
+                branch: 'main',
+                status: 'success',
+                timestamp: '2024-01-15T10:30:00Z',
+                message: 'Add new chart indicators',
+                author: 'developer',
+                testsRun: 12,
+                testsPassed: 12,
+                testsFailed: 0
+            },
+            {
+                id: 'def456ghi789',
+                commit: 'def456g',
+                branch: 'staging',
+                status: 'failure',
+                timestamp: '2024-01-15T09:15:00Z',
+                message: 'Fix authentication flow',
+                author: 'developer',
+                testsRun: 12,
+                testsPassed: 10,
+                testsFailed: 2
+            },
+            {
+                id: 'ghi789jkl012',
+                commit: 'ghi789j',
+                branch: 'main',
+                status: 'success',
+                timestamp: '2024-01-14T16:45:00Z',
+                message: 'Update dashboard layout',
+                author: 'developer',
+                testsRun: 12,
+                testsPassed: 12,
+                testsFailed: 0
+            }
+        ];
+        
+        function formatTimestamp(timestamp) {
+            const date = new Date(timestamp);
+            return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+        }
+        
+        function renderReports(reports) {
+            const container = document.getElementById('reports-container');
+            
+            if (reports.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <h3>No test reports yet</h3>
+                        <p>Test reports will appear here after your first CI run</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            const reportsHtml = reports.map(report => `
+                <div class="report-item">
+                    <div class="report-info">
+                        <div class="report-title">${report.message}</div>
+                        <div class="report-meta">
+                            <span>📝 <span class="commit-hash">${report.commit}</span></span>
+                            <span>🌿 ${report.branch}</span>
+                            <span>👤 ${report.author}</span>
+                            <span>🕒 ${formatTimestamp(report.timestamp)}</span>
+                            <span>📊 ${report.testsPassed}/${report.testsRun} passed</span>
+                        </div>
+                    </div>
+                    <div class="report-actions">
+                        <span class="status-badge status-${report.status}">
+                            ${report.status === 'success' ? '✅ Passed' : '❌ Failed'}
+                        </span>
+                        <a href="./test-reports/${report.id}/" class="btn btn-primary">View Report</a>
+                        <a href="https://github.com/your-repo/actions" class="btn btn-secondary">View Logs</a>
+                    </div>
+                </div>
+            `).join('');
+            
+            container.innerHTML = `<div class="report-list">${reportsHtml}</div>`;
+        }
+        
+        function updateStats(reports) {
+            const totalRuns = reports.length;
+            const totalPassed = reports.filter(r => r.status === 'success').length;
+            const totalFailed = reports.filter(r => r.status === 'failure').length;
+            const successRate = totalRuns > 0 ? Math.round((totalPassed / totalRuns) * 100) : 0;
+            
+            document.getElementById('total-passed').textContent = totalPassed;
+            document.getElementById('total-failed').textContent = totalFailed;
+            document.getElementById('total-runs').textContent = totalRuns;
+            document.getElementById('success-rate').textContent = successRate + '%';
+        }
+        
+        // Initialize the dashboard
+        function initDashboard() {
+            // In a real implementation, you would fetch this data from GitHub API
+            // For now, we'll use mock data
+            renderReports(mockReports);
+            updateStats(mockReports);
+        }
+        
+        // Load dashboard when page loads
+        document.addEventListener('DOMContentLoaded', initDashboard);
+    </script>
+</body>
+</html>

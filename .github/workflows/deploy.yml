@@ -171,3 +171,81 @@ jobs:
           else
             echo "❌ Deployment to ${{ env.ENV }} failed!"
           fi
+
+  smoke-tests:
+    name: Run Smoke Tests
+    uses: ./.github/workflows/smoke-tests.yml
+    needs: deploy
+    if: success()
+    with:
+      environment_url: ${{ github.ref_name == 'main' && 'https://www.akinatorassets.com' || 'https://staging.akinatorassets.com' }}
+      environment_name: ${{ github.ref_name == 'main' && 'production' || 'staging' }}
+      deployment_commit: ${{ github.sha }}
+    secrets:
+      TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
+      TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
+
+  trigger-full-ui-tests:
+    name: Trigger Full UI Tests After Deployment
+    runs-on: ubuntu-latest
+    needs: [deploy, smoke-tests]
+    if: success()
+    
+    steps:
+      - name: Set test environment URL
+        run: |
+          if [[ "${{ github.ref_name }}" == "main" ]] || [[ "${{ github.event.inputs.environment }}" == "production" ]]; then
+            echo "TEST_URL=https://www.akinatorassets.com" >> $GITHUB_ENV
+            echo "ENV_NAME=production" >> $GITHUB_ENV
+          else
+            echo "TEST_URL=https://staging.akinatorassets.com" >> $GITHUB_ENV
+            echo "ENV_NAME=staging" >> $GITHUB_ENV
+          fi
+          
+      - name: Trigger Full UI Test Workflow
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const response = await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'ui-tests.yml',
+              ref: context.ref,
+              inputs: {
+                test_environment: '${{ env.TEST_URL }}',
+                deployment_trigger: 'true',
+                deployed_environment: '${{ env.ENV_NAME }}',
+                deployment_commit: '${{ github.sha }}'
+              }
+            });
+            
+            console.log('✅ Full UI test workflow triggered successfully');
+            console.log(`🧪 Testing deployed application at: ${{ env.TEST_URL }}`);
+            console.log(`📊 View test results at: https://github.com/${{ github.repository }}/actions`);
+            
+      - name: Add deployment comment
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const comment = `## 🚀 Deployment Complete
+            
+            **Environment:** ${{ env.ENV_NAME }}
+            **URL:** ${{ env.TEST_URL }}
+            **Commit:** \`${{ github.sha }}\`
+            
+            ✅ **Smoke tests passed** - Critical functionality verified
+            🧪 **Full UI test suite triggered** - Comprehensive testing in progress
+            
+            📊 [View smoke test results](https://github.com/${{ github.repository }}/actions/workflows/smoke-tests.yml)
+            📊 [View full test results](https://github.com/${{ github.repository }}/actions/workflows/ui-tests.yml)
+            `;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });

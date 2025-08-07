@@ -1,0 +1,347 @@
+name: UI Test Automation
+
+on:
+  push:
+    branches: [ main, staging ]
+  pull_request:
+    branches: [ main, staging ]
+  workflow_dispatch:
+    inputs:
+      test_environment:
+        description: 'Test environment URL'
+        required: false
+        default: 'https://staging.akinatorassets.com'
+        type: string
+      headed_mode:
+        description: 'Run tests in headed mode (visible browser)'
+        required: false
+        default: false
+        type: boolean
+      deployment_trigger:
+        description: 'Triggered by deployment workflow'
+        required: false
+        default: 'false'
+        type: string
+      deployed_environment:
+        description: 'Environment that was deployed'
+        required: false
+        default: 'staging'
+        type: string
+      deployment_commit:
+        description: 'Commit SHA that was deployed'
+        required: false
+        default: ''
+        type: string
+
+env:
+  # Test configuration
+  NODE_VERSION: '18'
+  PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/ms-playwright
+  
+jobs:
+  ui-tests:
+    name: Run UI Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          
+      - name: Cache Playwright browsers
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.PLAYWRIGHT_BROWSERS_PATH }}
+          key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
+            
+      - name: Install dependencies
+        run: |
+          npm ci
+          npx playwright install chrome
+          npx playwright install-deps chrome
+          
+      - name: Set test environment
+        run: |
+          # Determine test URL based on deployment trigger or branch
+          if [[ "${{ github.event.inputs.deployment_trigger }}" == "true" ]]; then
+            # Triggered by deployment - use the deployed environment URL
+            TEST_URL="${{ github.event.inputs.test_environment }}"
+            echo "🚀 Post-deployment testing triggered"
+            echo "📦 Deployed environment: ${{ github.event.inputs.deployed_environment }}"
+            echo "📝 Deployed commit: ${{ github.event.inputs.deployment_commit }}"
+          elif [[ "${{ github.event.inputs.test_environment }}" != "" ]]; then
+            # Manual trigger with custom URL
+            TEST_URL="${{ github.event.inputs.test_environment }}"
+            echo "🔧 Manual testing with custom URL"
+          elif [[ "${{ github.ref_name }}" == "main" ]]; then
+            TEST_URL="https://www.akinatorassets.com"
+            echo "🏭 Testing production environment"
+          elif [[ "${{ github.ref_name }}" == "staging" ]]; then
+            TEST_URL="https://staging.akinatorassets.com"
+            echo "🧪 Testing staging environment"
+          else
+            TEST_URL="https://staging.akinatorassets.com"
+            echo "🔀 Testing against staging (default for feature branches)"
+          fi
+          
+          echo "BASE_URL=$TEST_URL" >> $GITHUB_ENV
+          echo "🌐 Testing against: $TEST_URL"
+          
+      - name: Setup test credentials
+        run: |
+          # Set up test credentials from secrets
+          echo "TEST_USER_EMAIL=${{ secrets.TEST_USER_EMAIL }}" >> $GITHUB_ENV
+          echo "TEST_USER_PASSWORD=${{ secrets.TEST_USER_PASSWORD }}" >> $GITHUB_ENV
+          
+      - name: Wait for application to be ready
+        run: |
+          echo "⏳ Waiting for application to be ready at $BASE_URL..."
+          
+          # If this is a post-deployment test, wait a bit longer for everything to settle
+          if [[ "${{ github.event.inputs.deployment_trigger }}" == "true" ]]; then
+            echo "🚀 Post-deployment testing - allowing extra time for application to stabilize..."
+            timeout=600  # 10 minutes for post-deployment
+            initial_wait=30  # Wait 30 seconds before first check
+            echo "⏳ Initial wait of ${initial_wait}s for deployment to settle..."
+            sleep $initial_wait
+          else
+            timeout=300  # 5 minutes for regular testing
+          fi
+          
+          interval=10
+          elapsed=0
+          
+          while [ $elapsed -lt $timeout ]; do
+            if curl -f -s -o /dev/null "$BASE_URL/login"; then
+              echo "✅ Application is ready!"
+              # Additional health check for post-deployment
+              if [[ "${{ github.event.inputs.deployment_trigger }}" == "true" ]]; then
+                echo "🔍 Running additional health checks for deployed application..."
+                if curl -f -s -o /dev/null "$BASE_URL/" && curl -f -s -o /dev/null "$BASE_URL/login"; then
+                  echo "✅ All health checks passed!"
+                else
+                  echo "⚠️ Some health checks failed, but login page is accessible. Proceeding with tests..."
+                fi
+              fi
+              break
+            else
+              echo "⏳ Application not ready yet, waiting ${interval}s... (${elapsed}/${timeout}s)"
+              sleep $interval
+              elapsed=$((elapsed + interval))
+            fi
+          done
+          
+          if [ $elapsed -ge $timeout ]; then
+            echo "❌ Application failed to become ready within ${timeout}s"
+            exit 1
+          fi
+          
+      - name: Run UI tests
+        run: |
+          # Set headed mode if requested
+          if [[ "${{ github.event.inputs.headed_mode }}" == "true" ]]; then
+            export PLAYWRIGHT_HEADED=true
+            echo "🖥️ Running tests in headed mode"
+          fi
+          
+          # Run the test suite
+          npm run test:all
+          
+      - name: Generate test summary
+        if: always()
+        run: |
+          echo "## 🧪 UI Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Add deployment context if this was triggered by deployment
+          if [[ "${{ github.event.inputs.deployment_trigger }}" == "true" ]]; then
+            echo "🚀 **Trigger:** Post-deployment testing" >> $GITHUB_STEP_SUMMARY
+            echo "📦 **Deployed Environment:** ${{ github.event.inputs.deployed_environment }}" >> $GITHUB_STEP_SUMMARY
+            echo "📝 **Deployed Commit:** ${{ github.event.inputs.deployment_commit }}" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "**Environment:** $BASE_URL" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Test Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Timestamp:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Check if tests passed
+          if [[ "${{ job.status }}" == "success" ]]; then
+            echo "✅ **Status:** All tests passed!" >> $GITHUB_STEP_SUMMARY
+            if [[ "${{ github.event.inputs.deployment_trigger }}" == "true" ]]; then
+              echo "🎉 **Deployment verification successful!**" >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "❌ **Status:** Some tests failed" >> $GITHUB_STEP_SUMMARY
+            if [[ "${{ github.event.inputs.deployment_trigger }}" == "true" ]]; then
+              echo "🚨 **Deployment verification failed!**" >> $GITHUB_STEP_SUMMARY
+            fi
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📊 [View detailed test report](https://$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]').github.io/test-reports/${{ github.sha }}/)" >> $GITHUB_STEP_SUMMARY
+          
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ github.sha }}
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 30
+          
+      - name: Upload screenshots on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-screenshots-${{ github.sha }}
+          path: test-results/**/*.png
+          retention-days: 7
+
+  publish-results:
+    name: Publish Test Results to GitHub Pages
+    runs-on: ubuntu-latest
+    needs: ui-tests
+    if: always() && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging')
+    
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+      
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+      
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Download test results
+        uses: actions/download-artifact@v4
+        with:
+          name: test-results-${{ github.sha }}
+          path: ./test-artifacts
+          
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+        
+      - name: Create GitHub Pages structure
+        run: |
+          mkdir -p ./pages
+          mkdir -p ./pages/test-reports/${{ github.sha }}
+          
+          # Copy test results to pages directory
+          if [ -d "./test-artifacts/playwright-report" ]; then
+            cp -r ./test-artifacts/playwright-report/* ./pages/test-reports/${{ github.sha }}/
+          fi
+          
+          # Create index page if it doesn't exist
+          if [ ! -f "./pages/index.html" ]; then
+            cat > ./pages/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>UI Test Reports - Akinator Assets</title>
+              <style>
+                  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 40px; }
+                  .header { border-bottom: 2px solid #e1e4e8; padding-bottom: 20px; margin-bottom: 30px; }
+                  .report-list { list-style: none; padding: 0; }
+                  .report-item { background: #f6f8fa; border: 1px solid #e1e4e8; border-radius: 6px; padding: 15px; margin-bottom: 10px; }
+                  .report-item:hover { background: #f1f3f4; }
+                  .commit-hash { font-family: monospace; background: #e1e4e8; padding: 2px 6px; border-radius: 3px; }
+                  .status-success { color: #28a745; }
+                  .status-failure { color: #d73a49; }
+                  .timestamp { color: #586069; font-size: 0.9em; }
+              </style>
+          </head>
+          <body>
+              <div class="header">
+                  <h1>🧪 UI Test Reports</h1>
+                  <p>Automated test results for Akinator Assets application</p>
+              </div>
+              <div id="reports">
+                  <p>Loading test reports...</p>
+              </div>
+              <script>
+                  // This will be populated by the GitHub Action
+                  document.getElementById('reports').innerHTML = '<p>No test reports available yet.</p>';
+              </script>
+          </body>
+          </html>
+          EOF
+          fi
+          
+          # Create a simple report index
+          cat > ./pages/test-reports/index.html << EOF
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>Test Report - ${{ github.sha }}</title>
+              <style>
+                  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 40px; }
+                  .header { border-bottom: 2px solid #e1e4e8; padding-bottom: 20px; margin-bottom: 30px; }
+                  .commit-info { background: #f6f8fa; border: 1px solid #e1e4e8; border-radius: 6px; padding: 15px; margin-bottom: 20px; }
+                  .commit-hash { font-family: monospace; background: #e1e4e8; padding: 2px 6px; border-radius: 3px; }
+                  .status-${{ needs.ui-tests.result }} { color: ${{ needs.ui-tests.result == 'success' && '#28a745' || '#d73a49' }}; }
+              </style>
+          </head>
+          <body>
+              <div class="header">
+                  <h1>🧪 Test Report</h1>
+              </div>
+              <div class="commit-info">
+                  <h3>Commit Information</h3>
+                  <p><strong>Hash:</strong> <span class="commit-hash">${{ github.sha }}</span></p>
+                  <p><strong>Branch:</strong> ${{ github.ref_name }}</p>
+                  <p><strong>Status:</strong> <span class="status-${{ needs.ui-tests.result }}">${{ needs.ui-tests.result == 'success' && '✅ Passed' || '❌ Failed' }}</span></p>
+                  <p><strong>Timestamp:</strong> $(date -u '+%Y-%m-%d %H:%M:%S UTC')</p>
+              </div>
+              <div>
+                  <h3>📊 Detailed Report</h3>
+                  <p><a href="./${{ github.sha }}/index.html">View Playwright Test Report</a></p>
+              </div>
+          </body>
+          </html>
+          EOF
+          
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./pages
+          
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+  notify-results:
+    name: Notify Test Results
+    runs-on: ubuntu-latest
+    needs: [ui-tests, publish-results]
+    if: always()
+    
+    steps:
+      - name: Create notification
+        run: |
+          if [[ "${{ needs.ui-tests.result }}" == "success" ]]; then
+            echo "✅ UI tests passed for commit ${{ github.sha }}"
+            echo "📊 View results: https://$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]').github.io/test-reports/${{ github.sha }}/"
+          else
+            echo "❌ UI tests failed for commit ${{ github.sha }}"
+            echo "🔍 Check the workflow logs for details"
+          fi

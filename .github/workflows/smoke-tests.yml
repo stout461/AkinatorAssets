@@ -1,0 +1,129 @@
+name: Smoke Tests (Post-Deployment)
+
+on:
+  workflow_call:
+    inputs:
+      environment_url:
+        description: 'Environment URL to test'
+        required: true
+        type: string
+      environment_name:
+        description: 'Environment name (staging/production)'
+        required: true
+        type: string
+      deployment_commit:
+        description: 'Commit SHA that was deployed'
+        required: true
+        type: string
+    secrets:
+      TEST_USER_EMAIL:
+        required: true
+      TEST_USER_PASSWORD:
+        required: true
+
+env:
+  NODE_VERSION: '18'
+  PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/ms-playwright
+  CI: true
+
+jobs:
+  smoke-tests:
+    name: Run Smoke Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          
+      - name: Cache Playwright browsers
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.PLAYWRIGHT_BROWSERS_PATH }}
+          key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
+            
+      - name: Install dependencies
+        run: |
+          npm install
+          
+      - name: Install Playwright browsers
+        run: |
+          npx playwright install chromium chrome
+          npx playwright install-deps chromium chrome
+          
+      - name: Setup test environment
+        run: |
+          echo "BASE_URL=${{ inputs.environment_url }}" >> $GITHUB_ENV
+          echo "TEST_USER_EMAIL=${{ secrets.TEST_USER_EMAIL }}" >> $GITHUB_ENV
+          echo "TEST_USER_PASSWORD=${{ secrets.TEST_USER_PASSWORD }}" >> $GITHUB_ENV
+          echo "🧪 Running smoke tests against: ${{ inputs.environment_url }}"
+          echo "📦 Environment: ${{ inputs.environment_name }}"
+          echo "📝 Deployed commit: ${{ inputs.deployment_commit }}"
+          
+      - name: Wait for application readiness
+        run: |
+          echo "⏳ Waiting for application to be ready..."
+          timeout=300
+          interval=15
+          elapsed=0
+          
+          while [ $elapsed -lt $timeout ]; do
+            if curl -f -s -o /dev/null "${{ inputs.environment_url }}/login"; then
+              echo "✅ Application is ready!"
+              break
+            else
+              echo "⏳ Waiting ${interval}s... (${elapsed}/${timeout}s)"
+              sleep $interval
+              elapsed=$((elapsed + interval))
+            fi
+          done
+          
+          if [ $elapsed -ge $timeout ]; then
+            echo "❌ Application not ready within ${timeout}s"
+            exit 1
+          fi
+          
+      - name: Run critical path smoke tests
+        run: |
+          echo "🚀 Running critical path smoke tests..."
+          # Run only the most essential tests for quick feedback
+          npx playwright test tests/e2e/auth/auth-simple.spec.ts --grep "should display login page|should redirect unauthenticated users"
+          npx playwright test tests/e2e/dashboard/dashboard-functionality.spec.ts --grep "should load and display stock chart"
+          npx playwright test tests/e2e/chart/technical-indicators.spec.ts --grep "should toggle RSI indicator"
+          
+      - name: Generate smoke test summary
+        if: always()
+        run: |
+          echo "## 🔥 Smoke Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🚀 **Post-deployment verification for ${{ inputs.environment_name }}**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** ${{ inputs.environment_url }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Deployed Commit:** ${{ inputs.deployment_commit }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Test Timestamp:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [[ "${{ job.status }}" == "success" ]]; then
+            echo "✅ **Status:** Critical functionality verified!" >> $GITHUB_STEP_SUMMARY
+            echo "🎉 **Deployment to ${{ inputs.environment_name }} is healthy**" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Status:** Critical functionality issues detected!" >> $GITHUB_STEP_SUMMARY
+            echo "🚨 **Deployment to ${{ inputs.environment_name }} may have issues**" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+      - name: Upload smoke test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-test-results-${{ inputs.environment_name }}-${{ inputs.deployment_commit }}
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 7

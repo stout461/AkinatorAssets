@@ -1,0 +1,27 @@
+{
+  "name": "stock-analysis-ui-tests",
+  "version": "1.0.0",
+  "description": "UI test automation for stock analysis web application",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:debug": "playwright test --debug",
+    "test:ui": "playwright test --ui",
+    "test:report": "playwright show-report",
+    "test:codegen": "playwright codegen",
+    "install:browsers": "playwright install",
+    "test:all": "node run-ui-tests.js",
+    "test:all:headed": "node run-ui-tests.js --headed",
+    "test:all:debug": "node run-ui-tests.js --debug",
+    "test:quick": "npx playwright test tests/e2e/auth/auth-simple.spec.ts tests/e2e/dashboard/dashboard-functionality.spec.ts tests/e2e/chart/technical-indicators.spec.ts",
+    "test:ci": "npx playwright test --reporter=html,json,junit"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.40.0",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

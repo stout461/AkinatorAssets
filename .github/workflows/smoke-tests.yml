@@ -50,7 +50,7 @@ jobs:
             
       - name: Install dependencies
         run: |
-          npm ci
+          npm install
           npx playwright install chrome
           npx playwright install-deps chrome
           
